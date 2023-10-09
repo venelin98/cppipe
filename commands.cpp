@@ -130,7 +130,8 @@ str $(const PendingCmd& cmd)
 
 	// check output size (not portable?)
 	int pipe_size;
-	int rc = ioctl(p.out, FIONREAD, &pipe_size); assert(rc==0);
+	// int rc = ioctl(p.out, FIONREAD, &pipe_size); assert(rc==0);
+	ioctl(p.out, FIONREAD, &pipe_size);
 
 	// write to the string directly, todo: find a better way
 	str output;
@@ -244,6 +245,16 @@ PendingCmd& operator>=(const PendingCmd& ccmd, fd_t fd)
 	return cmd;
 }
 
+PendingCmd& operator>>=(const PendingCmd& cmd, const char* file)
+{
+	fd_t fd = open_or_die(file, O_WRONLY | O_CREAT | O_APPEND);
+	return cmd >= fd;
+}
+PendingCmd& operator>>=(const PendingCmd& cmd, fd_t fd)
+{
+	return cmd >= fd;
+}
+
 PendingCmd& operator<(const PendingCmd& cmd, const char* file)
 {
 	fd_t fd = open_or_die(file, O_RDONLY);
@@ -253,6 +264,7 @@ PendingCmd& operator<(const PendingCmd& ccmd, fd_t fd)
 {
 	auto& cmd = const_cast<PendingCmd&>(ccmd);
 	assert(cmd.in == 0 || !"ERROR: Input is already redirected!");
+
 	cmd.in = fd;
 	return cmd;
 }

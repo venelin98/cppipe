@@ -3,13 +3,8 @@
 #include <sys/wait.h>
 #include <iostream>
 
-// tab vs space
 // shaded obj?
-// fix warning
 /* close files on destruction ?*/
-/* -> for error ? */
-// check if processes normal_exit
-
 using namespace std;
 int main()
 {

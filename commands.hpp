@@ -125,10 +125,13 @@ PendingCmd& operator>(const PendingCmd&, fd_t);
 /* Same but append rather then truncate the file */
 PendingCmd& operator>>(const PendingCmd&, const char* file);
 PendingCmd& operator>>(const PendingCmd&, fd_t);
+
 /* Redirect errors to file */
 PendingCmd& operator>=(const PendingCmd&, const char* file);
 PendingCmd& operator>=(const PendingCmd&, fd_t);
-/* todo >>= */
+/* Same but append rather then truncate the file */
+PendingCmd& operator>>=(const PendingCmd&, const char* file);
+PendingCmd& operator>>=(const PendingCmd&, fd_t);
 
 /* Shell oprator < use file as input */
 PendingCmd& operator<(const PendingCmd&, const char* file);
@@ -144,7 +147,7 @@ PendingCmd operator&(const PendingCmd&, const Cmd&);
    to allow for simpler synthax, speed and safety
    e.g:         echo + some_string
    rather then: echo + some_string.c_str() */
-class str: public std::basic_string<char> /* todo: allocator */
+class LeakStr: public std::basic_string<char> /* todo: allocator */
 {
 public:
 	using std::basic_string<char>::basic_string;
@@ -155,6 +158,6 @@ public:
    shell:
    var=$(ls)
    becomes:
-   string var = $(ls);
+   auto var = $(ls);
 */
-str $(const PendingCmd&);
+LeakStr $(const PendingCmd&);

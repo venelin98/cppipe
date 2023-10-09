@@ -1,2 +1,18 @@
-Library for easy shell like syntax and command execution in C++.
+Cppipe allows you to write and execute script like C++ programs.
+It offers a shell like synthax for seamless command execution.
+
+In this way your scripts can benefit from increased control and speed, while
+maintaining a lot of the potential for simple command callsynthax.
+
+INSTALLATION:
+In terminal use:
+sudo ./install.sh
+
+HOW TO WRITE A CPPIPE PROGRAM:
+Just include <cppipe/commands.hpp>
+
+HOW TO EXECUTE A CPPIPE PROGRAM:
+In terminal use:
+cppipe my_cppipe_program.cpp
+
  
