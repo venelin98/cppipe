@@ -124,7 +124,7 @@ void PendingCmd::cancel()
 	execed_ = true;
 }
 
-str $(const PendingCmd& cmd)
+std::string $(const PendingCmd& cmd)
 {
 	RetProc p = const_cast<PendingCmd&>(cmd).runRedir();
 
@@ -134,7 +134,7 @@ str $(const PendingCmd& cmd)
 	ioctl(p.out, FIONREAD, &pipe_size);
 
 	// write to the string directly, todo: find a better way
-	str output;
+	std::string output;
 	output.resize(pipe_size);
 	read(p.out, (char*)output.c_str(), output.size());
 	return output;

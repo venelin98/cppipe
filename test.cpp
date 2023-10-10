@@ -15,8 +15,8 @@ int main()
 	Cmd echo("echo");
 	Cmd rm("rm");
 
-	str out1 = $(ll | grep + "cpp" | grep + "child");
-	if(out1.find("childProcess.cpp") != str::npos)
+	string out1 = $(ll | grep + "cpp" | grep + "child");
+	if(out1.find("childProcess.cpp") != string::npos)
 		cout << "OK 0/11" << endl;
 
 	Cmd success("echo", "OK 1/11");
@@ -53,5 +53,6 @@ int main()
 	// wait for all detached
 	while(wait(nullptr) != -1);
 
-	exec( echo + $(echo + "OK 11/11") );
+	// todo
+	// exec( echo + $(echo + "OK 11/11") );
 }

@@ -143,16 +143,17 @@ PendingCmd& operator<(const PendingCmd&, fd_t);
    this is not possible */
 PendingCmd operator&(const PendingCmd&, const Cmd&);
 
+// todo
 /* string that is implicitly cast to const char* and doesn't deallocate
    to allow for simpler synthax, speed and safety
    e.g:         echo + some_string
    rather then: echo + some_string.c_str() */
-class LeakStr: public std::basic_string<char> /* todo: allocator */
-{
-public:
-	using std::basic_string<char>::basic_string;
-	operator const char*() { return c_str();}
-};
+// class str: public std::basic_string<char> /* todo: allocator */
+// {
+// public:
+// 	using std::basic_string<char>::basic_string;
+// 	operator const char*() { return c_str();}
+// };
 
 /* Execute a command and capture the output
    shell:
@@ -160,4 +161,4 @@ public:
    becomes:
    auto var = $(ls);
 */
-LeakStr $(const PendingCmd&);
+std::string $(const PendingCmd&);
