@@ -1,7 +1,6 @@
 #include <cstring>
 #include <iostream>
 #include <assert.h>
-#include <sys/wait.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -26,7 +25,7 @@ static fd_t open_or_die(const char* file, I32 flags)
 
 RetProc Cmd::operator()(fd_t in, fd_t out, fd_t err)
 {
-	RetProc p = runProcess(argv.data(), in, out, err);
+	Proc p = createProcess(argv.data(), in, out, err);
 
 	// Close files if such were used
 	// if(in > 2)
@@ -36,7 +35,7 @@ RetProc Cmd::operator()(fd_t in, fd_t out, fd_t err)
 	// if(err > 2)
 	// 	close(err);
 
-	return p;
+	return wait(p);
 }
 
 Proc Cmd::detach(fd_t in, fd_t out, fd_t err)
@@ -99,10 +98,11 @@ RetProc PendingCmd::operator()()
 RetProc PendingCmd::runRedir()
 {
 	assert(!execed_ && "executed command twice"); assert(out==1 && "already redirected");
+	assert(out==1 && "capturing redirected proccess");
 	execed_ = true;
 
-	RetProc p = runProcess(cmd.argv.data(), in, err);
-	return p;
+	Proc p = createCapProcess(cmd.argv.data(), in, err);
+	return wait(p);
 }
 
 Proc PendingCmd::detach()

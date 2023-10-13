@@ -1,8 +1,8 @@
-Cppipe allows you to write and execute script like C++ programs.
-It offers a shell like synthax for seamless command execution.
+cppipe is a utility that allows you to use C++ programs as scripts.
+it also offers a shell like syntax for seamless command execution
 
 In this way your scripts can benefit from increased control and speed, while
-maintaining a lot of the potential for simple command callsynthax.
+maintaining a lot of the potential for simple command call syntax.
 
 INSTALLATION:
 In terminal use:
@@ -13,6 +13,6 @@ Just include <cppipe/commands.hpp>
 
 HOW TO EXECUTE A CPPIPE PROGRAM:
 In terminal use:
-cppipe my_cppipe_program.cpp
+cppipe my_cppipe_program.cpp ${ANY_ARGUMENTS_FOR_YOUR_PROGRAM}
 
- 
+

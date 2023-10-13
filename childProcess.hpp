@@ -22,6 +22,9 @@ struct RetProc: public Proc		/* returned process */
 
 };
 
+// Wait for a running proccess to finish
+RetProc wait(Proc);
+
 enum Redirect: U32
 {
 	NOTHING =0,
@@ -32,7 +35,8 @@ enum Redirect: U32
 
 
 /* For all funcions argv is an array of command parameters
- * argv[0] is the command itself, argv needs to end with nullptr */
+ * argv[0] is the command itself, argv needs to end with nullptr
+ * non of the functions wait for the proccess to finish */
 
 /* Create a proccess and redirect anyting flaged to a new pipe
    flags - INPUT, OUTPUT, ERR
@@ -44,9 +48,6 @@ Proc createCapProcess(const char* const argv[], fd_t in=0, fd_t err=2);
 
 /* Can take FDs as arguments which will be used instead of std */
 Proc createProcess(const char* const argv[], fd_t in=0, fd_t out=1, fd_t err=2);
-
-/* Same but waits for the process to finish */
-RetProc runProcess(const char* const argv[], fd_t in=0, fd_t out=1, fd_t err=2);
 
 /* execvp the command or exit */
 void exec_or_die(const char* const argv[]);

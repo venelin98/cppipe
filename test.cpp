@@ -8,7 +8,6 @@
 using namespace std;
 int main()
 {
-	// f(var("ab"));
 	Cmd ls("ls");
 	Cmd ll("ls", "-l");
 	Cmd grep("grep");

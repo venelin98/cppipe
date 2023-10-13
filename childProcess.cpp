@@ -17,6 +17,13 @@ RetProc::operator bool()
 	return normal_exit && returned == 0;
 }
 
+RetProc wait(Proc p)
+{
+	int status;
+	waitpid(p.pid, &status, 0);
+	return RetProc(p, status);
+}
+
 /* create a process taking input from pipe childIn */
 static Proc createProc(const char* const argv[], const fd_t childIn[2])
 {
@@ -167,17 +174,6 @@ Proc createProcess(const char* const argv[], fd_t in, fd_t out, fd_t err)
 	}
 
 	return proc;
-}
-
-RetProc runProcess(const char* const argv[], fd_t in, fd_t out, fd_t err)
-{
-	Proc p = createProcess(argv, in, out, err);
-
-	// Wait to end
-	int status;
-	waitpid(p.pid, &status, 0);
-
-	return RetProc(p, status);
 }
 
 void exec_or_die(const char* const argv[])
