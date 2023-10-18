@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
 		cout << "Usage: cppipe [-g] FILE [ARGUMENTS]...\n";
 		return 1;
 	}
-	if(!strcmp(argv[1], "--help"))
+	if( !strcmp(argv[1], "--help") )
 	{
 		cout << "Usage: cppipe [-g] FILE [ARGUMENTS]...\n"
 			<< "Compile and run C++ source FILE that uses the cppipe library.\n"
@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
 
 	bool debug = false;
 	int file_arg = 1;
-	if(!strcmp(argv[1], "-g"))
+	if( !strcmp(argv[1], "-g") )
 	{
 		if(argc < 3)
 		{

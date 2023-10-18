@@ -52,6 +52,8 @@ int main()
 	// wait for all detached
 	while(wait(nullptr) != -1);
 
+	exec( echo + "OK 11/11" );
+
 	// todo
 	// exec( echo + $(echo + "OK 11/11") );
 }
