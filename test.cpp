@@ -3,11 +3,17 @@
 #include <sys/wait.h>
 #include <iostream>
 
-// shaded obj?
-/* close files on destruction ?*/
 using namespace std;
-int main()
+int main(int argc, char* argv[])
 {
+	if(argc > 1)
+	{
+		cerr << "FAILURE: didn't expect any arguments, got:\n";
+		for(int i = 0; i < argc; ++i)
+			cerr << argv[i] << endl;
+		exit(1);
+	}
+
 	Cmd ls("ls");
 	Cmd ll("ls", "-l");
 	Cmd grep("grep");

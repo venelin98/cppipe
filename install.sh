@@ -2,7 +2,7 @@
 set -e
 
 # Compile lib
-options="-std=c++17 -Ofast -flto -march=native -DNDEBUG -Wall -Wextra -Wno-parentheses -s -pipe"
+options="-std=c++17 -Ofast -flto -march=native -DNDEBUG -Wall -Wextra -Wno-parentheses -Wno-unused-result -s -pipe"
 g++ -c $options commands.cpp childProcess.cpp
 
 # Create lib

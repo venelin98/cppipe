@@ -6,10 +6,11 @@
 #include "commands.hpp"
 
 using namespace std;
-using namespace std::filesystem;
+namespace fs = std::filesystem;
 
-static path get_cache_path(const char* file);
-static bool compile_file(const char* file, path cache, bool debug); // return true on success
+static fs::path find_path_to_cpp(string_view file); // find the cpp to run, if it doesn't exist, exit program
+static fs::path get_cache_path(const fs::path& file);	// find the path of the cache for the given file path
+static bool compile_file(const fs::path& file, const fs::path& cache, bool debug); // return true on success
 
 int main(int argc, char* argv[])
 {
@@ -43,19 +44,14 @@ int main(int argc, char* argv[])
 		file_arg = 2;
 	}
 
-	const char* file = argv[file_arg];
-	if( !exists(file) )
-	{
-		cerr << "File: " << file << " doesn't exist\n";
-		exit(1);
-	}
+	const fs::path file = find_path_to_cpp( argv[file_arg] );
 
-	path cache( get_cache_path(file) );   // cache bins to avoid recompiles
+	fs::path cache( get_cache_path(file) );   // cache bins to avoid recompiles
 
 	if(debug)
 		cache += "_dbg";
 
-	// Compile the passed file
+	// Compile the cpp
 	if( !compile_file(file, cache, debug) )
 		return 1;
 
@@ -68,14 +64,52 @@ int main(int argc, char* argv[])
 	}
 
 	run += cache.c_str();
-	for(int i = file_arg; i < argc; ++i)
+	for(int i = file_arg+1; i < argc; ++i)
 		run += argv[i];
 	exec(run);
 }
 
-static path get_cache_path(const char* file)
+static fs::path find_path_to_cpp(string_view file)
 {
-	path cache;
+	if(fs::exists(file))	// found relative to CWD
+	{
+		return file;
+	}
+
+	// search files on CPPIPEPATH
+	const char* cppipepath_var = getenv("CPPIPEPATH");
+	if(cppipepath_var)	// is set
+	{
+		const string_view cppipepath = cppipepath_var;
+		for(size_t begin = 0, end = cppipepath.find(':');
+		    ;
+		    begin = end+1, end = cppipepath.find(':', begin) )
+		{
+			const string_view path_entry = cppipepath.substr(begin, end - begin);
+			if( fs::is_directory(path_entry) )
+			{
+				for(const fs::directory_entry& e: fs::directory_iterator(path_entry))
+				{
+					if(fs::is_regular_file(e) && e.path().filename() == file)
+					{
+						return e;
+					}
+				}
+			}
+
+			if(end == string::npos)
+				break;
+		}
+	}
+
+	// Couln't find the cpp
+	cerr << "File: " << file << " doesn't exist\n";
+	exit(1);
+}
+
+static fs::path get_cache_path(const fs::path& file)
+{
+	fs::path cache;
 	if(char* xdg_cache = getenv("XDG_CACHE_HOME"))
 	{
 		cache = xdg_cache;
@@ -87,14 +121,14 @@ static path get_cache_path(const char* file)
 		cache = home;
 		cache /= ".cache/cppipe";
 	}
-	cache += absolute(file);
-	create_directories(cache.parent_path());
+	cache += fs::absolute(file);
+	fs::create_directories(cache.parent_path());
 	return cache;
 }
 
-static bool compile_file(const char* file, path cache, bool debug)
+static bool compile_file(const fs::path& file, const fs::path& cache, bool debug)
 {
-	// Only compile if the source is newer then the bin or we are in debug
+	// Only compile if the source is newer then the bin
 	error_code ec;
 	if(last_write_time(file) > last_write_time(cache, ec))
 	{
@@ -103,7 +137,7 @@ static bool compile_file(const char* file, path cache, bool debug)
 			"-o", cache.c_str(),
 			"-pipe", "-std=c++17", "-march=native",
 			// "-Wall", "-Wextra", "-Wno-parentheses",
-			file,
+			file.c_str(),
 			"-lcppipe"
 			);
 
