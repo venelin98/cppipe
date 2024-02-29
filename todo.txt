@@ -1,6 +1,10 @@
+man
+
 ?
 -Wno-unused-result in install.sh
+split
 Check all return codes and report errors
 close files on destruction
 make portable
 shaded obj
+uninstall
