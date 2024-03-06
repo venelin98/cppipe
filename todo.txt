@@ -8,3 +8,4 @@ close files on destruction
 make portable
 shaded obj
 uninstall
+throw when a command couldnt be ran

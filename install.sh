@@ -9,7 +9,7 @@ options="-std=c++17 -Ofast -flto -march=native -DNDEBUG -Wall -Wextra -Wno-paren
 g++ -c $options commands.cpp childProcess.cpp
 
 # Create lib
-ar r libcppipe.a commands.o childProcess.o
+ar rc libcppipe.a commands.o childProcess.o
 mv libcppipe.a ${PREFIX}/lib
 rm commands.o childProcess.o
 
