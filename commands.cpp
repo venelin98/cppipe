@@ -1,6 +1,7 @@
 #include <cstring>
 #include <iostream>
 #include <assert.h>
+#include <limits.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -95,16 +96,6 @@ RetProc PendingCmd::operator()()
 	return cmd(in, out, err);
 }
 
-RetProc PendingCmd::runRedir()
-{
-	assert(!execed_ && "executed command twice"); assert(out==1 && "already redirected");
-	assert(out==1 && "capturing redirected proccess");
-	execed_ = true;
-
-	Proc p = createCapProcess(cmd.argv.data(), in, err);
-	return wait(p);
-}
-
 Proc PendingCmd::detach()
 {
 	assert(!execed_ && "Executed command twice");
@@ -115,6 +106,8 @@ Proc PendingCmd::detach()
 Proc PendingCmd::detachRedirOut()
 {
 	assert(!execed_ && "Executed command twice"); assert(out==1 && "already redirected");
+	assert(out==1 && "capturing redirected proccess");
+
 	execed_ = true;
 	return createCapProcess(cmd.argv.data(), in, err);
 }
@@ -126,17 +119,28 @@ void PendingCmd::cancel()
 
 std::string $(const PendingCmd& cmd)
 {
-	RetProc p = const_cast<PendingCmd&>(cmd).runRedir();
+	Proc p = const_cast<PendingCmd&>(cmd).detachRedirOut();
 
 	// check output size (not portable?)
-	int pipe_size;
+	// int pipe_size;
 	// int rc = ioctl(p.out, FIONREAD, &pipe_size); assert(rc==0);
-	ioctl(p.out, FIONREAD, &pipe_size);
+	// ioctl(p.out, FIONREAD, &pipe_size);
 
 	// write to the string directly, todo: find a better way
 	std::string output;
-	output.resize(pipe_size);
-	read(p.out, (char*)output.c_str(), output.size());
+
+	int read_count;
+	int i = 0;
+	do
+	{
+		output.resize(output.size() + PIPE_BUF);   // todo: check if we are overallocating
+
+		read_count = read(p.out, &output[i], PIPE_BUF);  // todo: check errno
+		i += read_count;
+	}
+	while(read_count > 0);
+	// p finished?
+	output.erase(i, output.size() - i);
 	return output;
 }
 

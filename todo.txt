@@ -1,7 +1,11 @@
+config
+support C
 man
 
 ?
+header only lib
 -Wno-unused-result in install.sh
+file operations, lack of uniformity (C++ vs POSIX)
 split
 Check all return codes and report errors
 close files on destruction

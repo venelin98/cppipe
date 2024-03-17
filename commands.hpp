@@ -58,8 +58,6 @@ public:
 
 	/* Run the command */
 	RetProc operator()();
-	/* Run the command, capturing the output in a new pipe */
-	RetProc runRedir();
 
 	/* Run the command async
 	   shell:   cmd &

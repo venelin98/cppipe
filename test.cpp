@@ -24,6 +24,10 @@ int main(int argc, char* argv[])
 	if(out1.find("childProcess.cpp") != string::npos)
 		cout << "OK 0/11" << endl;
 
+	string out2 = $(echo + "abc" + "def");
+	if(auto len = out2.size(); len != 8)
+		cerr << "FAILURE: unexpected output length " << len << endl;
+
 	Cmd success("echo", "OK 1/11");
 	Cmd fail("mkdir", ".");
 	Cmd unexpected("echo", "FAILURE");

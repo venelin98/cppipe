@@ -6,6 +6,7 @@ PREFIX=/usr/local
 
 # Compile lib
 options="-std=c++17 -Ofast -flto -march=native -DNDEBUG -Wall -Wextra -Wno-parentheses -Wno-unused-result -s -pipe"
+# options="-std=c++17 -g"
 g++ -c $options commands.cpp childProcess.cpp
 
 # Create lib
@@ -21,3 +22,6 @@ mv cppipe ${PREFIX}/bin
 # Install headers
 mkdir -p ${PREFIX}/include/cppipe
 cp basicTypes.h commands.hpp childProcess.hpp ${PREFIX}/include/cppipe
+
+# Clear old cache
+rm -rf ~/.cache/cppipe ${XDG_CACHE_HOME}/cppipe
