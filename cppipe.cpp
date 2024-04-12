@@ -31,14 +31,20 @@ static fs::path get_cache_dir_path(const fs::path& src_file);
 // map file in memory with write persmissions
 static MappedFile mapfile_for_writing(const fs::path& file);
 
-// check weather a src file or it's headers have changed
-static bool is_src_file_changed(const fs::path& src_file, const fs::path& cache_dir);
+// preprocess the src file and compare the result to the previous version, return weather it's changed
+// remove cached bin if true
+static bool preprocess_and_compare();
 
-// returns bin path
-static fs::path compile_file(const fs::path& src_file, const fs::path& cache_dir);
+// only recompile if changes are present
+static void compile_src_file();
 
 static const char DEBUG_PREFIX[] = "__DBG";
+
+// Context
 static bool debug = false;
+static fs::path src_file;
+static fs::path cache_dir;
+static fs::path bin;   // cache bins to avoid recompiles
 
 int main(int argc, char* argv[])
 {
@@ -71,12 +77,13 @@ int main(int argc, char* argv[])
 		file_arg = 2;
 	}
 
-	const fs::path src_file = find_path_to_cpp( argv[file_arg] );
-
-	fs::path cache_dir( get_cache_dir_path(src_file) );   // cache bins to avoid recompiles
+	// Init context
+	src_file = find_path_to_cpp( argv[file_arg] );
+	cache_dir = get_cache_dir_path(src_file);
+	bin = cache_dir / (debug ? DEBUG_PREFIX : "") += src_file.filename();
 
 	// Compile the src
-	fs::path bin = compile_file(src_file, cache_dir);
+	compile_src_file();
 
 	// Run the src file without forking
 	Cmd run;
@@ -161,8 +168,7 @@ static MappedFile mapfile_for_writing(const fs::path& file)
 	return res;
 }
 
-// preprocess the file and comapre it to the old pped version
-static bool is_src_file_changed(const fs::path& src_file, const fs::path& cache_dir)
+static bool preprocess_and_compare()
 {
 	Cmd preprocess(
 		"g++",
@@ -197,35 +203,31 @@ static bool is_src_file_changed(const fs::path& src_file, const fs::path& cache_
 		}
 		else
 		{
+			fs::remove(bin); // rm old bin
 			ofstream pp_file(old_pp_path);
 			pp_file << new_pp;
 			return true;
 		}
-
-
 	}
 	else
 	{
+		fs::remove(bin); // rm old bin
 		ofstream pp_file(old_pp_path);
 		pp_file << new_pp;
 		return true;
 	}
-
-	return true;
 }
 
-static fs::path compile_file(const fs::path& src_file, const fs::path& cache_dir)
+static void compile_src_file()
 {
 	// Only compile if the source is newer then the bin
-	fs::path cache_bin = cache_dir / (debug ? DEBUG_PREFIX : "") += src_file.filename();
-
-	if(is_src_file_changed(src_file, cache_dir) || !fs::exists(cache_bin))
+	if(preprocess_and_compare() || !fs::exists(bin))
 	{
 		string preprocessed_file = cache_dir / src_file.stem() += ".ii"; // todo: duplicates with old_pp_path // todo: support C
 		Cmd compile(
 			"g++",
 			preprocessed_file.c_str(),
-			"-o", cache_bin.c_str(),
+			"-o", bin.c_str(),
 			"-pipe", "-std=c++17", "-march=native",
 			"-Wall", "-Wextra", "-Wno-parentheses",
 			"-lcppipe"
@@ -248,5 +250,4 @@ static fs::path compile_file(const fs::path& src_file, const fs::path& cache_dir
 		if( !compile() )	 // if failed to compile
 			exit(1);
 	}
-	return cache_bin;
 }
