@@ -13,3 +13,4 @@ make portable
 shaded obj
 uninstall
 throw when a command couldnt be ran
+improve debug (the src file shown is the .ii)

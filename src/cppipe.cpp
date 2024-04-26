@@ -3,11 +3,13 @@
 #include <filesystem>
 #include <iostream>
 #include <fstream>
+#include <string_view>
 
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include "commands.hpp"
+#include "../config.h"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -21,6 +23,9 @@ struct MappedFile		// todo: move to utils
 	char* data;
 	unsigned len;
 };
+
+// process the args until the src file arg is found, return its index
+static int parse_args_until_src(int argc, char* argv[]);
 
 // find the cpp to run, if it doesn't exist, exit program
 static fs::path find_path_to_cpp(string_view src_file);
@@ -38,6 +43,10 @@ static bool preprocess_and_compare();
 // only recompile if changes are present
 static void compile_src_file();
 
+static void print_usage();
+
+static bool is_src_file(string_view path);
+
 static const char DEBUG_PREFIX[] = "__DBG";
 
 // Context
@@ -48,37 +57,10 @@ static fs::path bin;   // cache bins to avoid recompiles
 
 int main(int argc, char* argv[])
 {
-	if(argc < 2)
-	{
-		cout << "Usage: cppipe [-g] FILE [ARGUMENTS]...\n";
-		return 1;
-	}
-	if( !strcmp(argv[1], "--help") )
-	{
-		cout << "Usage: cppipe [-g] FILE [ARGUMENTS]...\n"
-			<< "Compile and run C++ source FILE that uses the cppipe library.\n"
-			"Pass the ARGUMENTS to the compiled binary.\n"
-			"The binaries are cached and recompiled only if the source or it's headers have changed.\n"
-			"-g debug the binary, asserts are also enabled\n";
-		return 0;
-
-	}
-
-	int file_arg = 1;
-	if( !strcmp(argv[1], "-g") )
-	{
-		if(argc < 3)
-		{
-			cout << "Usage: cppipe [-g] FILE [ARGUMENTS]...\n";
-			return 1;
-		}
-
-		debug = true;
-		file_arg = 2;
-	}
+	int src_arg = parse_args_until_src(argc, argv);
 
 	// Init context
-	src_file = find_path_to_cpp( argv[file_arg] );
+	src_file = find_path_to_cpp( argv[src_arg] );
 	cache_dir = get_cache_dir_path(src_file);
 	bin = cache_dir / (debug ? DEBUG_PREFIX : "") += src_file.filename();
 
@@ -94,9 +76,51 @@ int main(int argc, char* argv[])
 	}
 
 	run += bin.c_str();
-	for(int i = file_arg+1; i < argc; ++i)
+	for(int i = src_arg+1; i < argc; ++i)
 		run += argv[i];
 	exec(run);
+}
+
+static int parse_args_until_src(int argc, char* argv[])
+{
+	if(argc < 2)
+	{
+		print_usage();
+		exit(1);
+	}
+
+	int src_arg = 0;
+	for(int i = 1; i < argc; ++i)
+	{
+		string_view arg( argv[i] );
+		if( arg ==  "--help" )
+		{
+			print_usage();
+			cout << "Compile and run C++ source CPP_FILE that uses the cppipe library.\n"
+				"Pass the ARGUMENTS to the compiled binary.\n"
+				"The binaries are cached and recompiled only if the source or it's headers have changed.\n"
+				"-g debug the binary, asserts are also enabled\n";
+			exit(0);
+		}
+
+		else if( arg == "-g" )
+			debug = true;
+
+		else if( is_src_file(arg) )
+		{
+			src_arg = i;
+			break;
+		}
+
+	}
+
+	if( !src_arg )
+	{
+		print_usage();
+		exit(1);
+	}
+
+	return src_arg;
 }
 
 static fs::path find_path_to_cpp(string_view src_file)
@@ -171,7 +195,7 @@ static MappedFile mapfile_for_writing(const fs::path& file)
 static bool preprocess_and_compare()
 {
 	Cmd preprocess(
-		"g++",
+		CXX,
 		"-E",		// preprocess only
 		"-P",		// don't generate linemarkers in the output to reduce file size
 		src_file.c_str()
@@ -225,29 +249,39 @@ static void compile_src_file()
 	{
 		string preprocessed_file = cache_dir / src_file.stem() += ".ii"; // todo: duplicates with old_pp_path // todo: support C
 		Cmd compile(
-			"g++",
+			CXX,
 			preprocessed_file.c_str(),
 			"-o", bin.c_str(),
-			"-pipe", "-std=c++17", "-march=native",
-			"-Wall", "-Wextra", "-Wno-parentheses",
-			"-lcppipe"
+			CXXFLAGS
 			);
 
 		if(debug)
 		{
-			compile.append_args({
-					"-g"
-					// "-Wall", "-Wextra", "-Wno-parentheses"
-				});
+			compile.append_args({ DEBUG_FLAGS });
 		}
 		else
 		{
-			compile.append_args({
-					"-Ofast", "-flto", "-s"
-				});
+			compile.append_args({ RELEASE_FLAGS });
 		}
 
 		if( !compile() )	 // if failed to compile
 			exit(1);
 	}
+}
+
+static void print_usage()
+{
+	cout << "Usage: cppipe [-g] CPP_FILE [ARGUMENTS]...\n";
+}
+
+static bool is_src_file(const string_view p)
+{
+	size_t end = p.size() - 1;
+
+	if( (p.size() > 4 && p[end-3] == '.' && p[end-2] == 'c' && p[end-1] == 'p' && p[end] == 'p')
+	    || (p.size() > 2 && p[end-1] == '.' && p[end] == 'c'))
+		return  true;
+
+	else
+		return false;
 }

@@ -1,5 +1,6 @@
 #!/bin/sh
 set -e
+cd src
 
 # Install location
 PREFIX=/usr/local
