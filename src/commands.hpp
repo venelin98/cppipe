@@ -160,3 +160,5 @@ PendingCmd operator&(const PendingCmd&, const Cmd&);
    auto var = $(ls);
 */
 std::string $(const PendingCmd&);
+
+#include "commands.inl"

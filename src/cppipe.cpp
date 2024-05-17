@@ -25,35 +25,35 @@ struct MappedFile		// todo: move to utils
 };
 
 // process the args until the src file arg is found, return its index
-static int parse_args_until_src(int argc, char* argv[]);
+int parse_args_until_src(int argc, char* argv[]);
 
 // find the cpp to run, if it doesn't exist, exit program
-static fs::path find_path_to_cpp(string_view src_file);
+fs::path find_path_to_cpp(string_view src_file);
 
 // find the path of the cache for the given src_file path
-static fs::path get_cache_dir_path(const fs::path& src_file);
+fs::path get_cache_dir_path(const fs::path& src_file);
 
 // map file in memory with write persmissions
-static MappedFile mapfile_for_writing(const fs::path& file);
+MappedFile mapfile_for_writing(const fs::path& file);
 
 // preprocess the src file and compare the result to the previous version, return weather it's changed
 // remove cached bin if true
-static bool preprocess_and_compare();
+bool preprocess_and_compare();
 
 // only recompile if changes are present
-static void compile_src_file();
+void compile_src_file();
 
-static void print_usage();
+void print_usage();
 
-static bool is_src_file(string_view path);
+bool is_src_file(string_view path);
 
-static const char DEBUG_PREFIX[] = "__DBG";
+const char DEBUG_PREFIX[] = "__DBG";
 
 // Context
-static bool debug = false;
-static fs::path src_file;
-static fs::path cache_dir;
-static fs::path bin;   // cache bins to avoid recompiles
+bool debug = false;
+fs::path src_file;
+fs::path cache_dir;
+fs::path bin;   // cache bins to avoid recompiles
 
 int main(int argc, char* argv[])
 {
@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
 	exec(run);
 }
 
-static int parse_args_until_src(int argc, char* argv[])
+int parse_args_until_src(int argc, char* argv[])
 {
 	if(argc < 2)
 	{
@@ -123,7 +123,7 @@ static int parse_args_until_src(int argc, char* argv[])
 	return src_arg;
 }
 
-static fs::path find_path_to_cpp(string_view src_file)
+fs::path find_path_to_cpp(string_view src_file)
 {
 	if(fs::exists(src_file))	// found relative to CWD
 	{
@@ -161,7 +161,7 @@ static fs::path find_path_to_cpp(string_view src_file)
 	exit(1);
 }
 
-static fs::path get_cache_dir_path(const fs::path& src_file)
+fs::path get_cache_dir_path(const fs::path& src_file)
 {
 	fs::path cache_dir;
 	if(char* xdg_cache = getenv("XDG_CACHE_HOME"))
@@ -180,7 +180,7 @@ static fs::path get_cache_dir_path(const fs::path& src_file)
 	return cache_dir;
 }
 
-static MappedFile mapfile_for_writing(const fs::path& file)
+MappedFile mapfile_for_writing(const fs::path& file)
 {
 	fd_t fd = open(file.c_str(), O_RDWR);
 
@@ -192,7 +192,7 @@ static MappedFile mapfile_for_writing(const fs::path& file)
 	return res;
 }
 
-static bool preprocess_and_compare()
+bool preprocess_and_compare()
 {
 	Cmd preprocess(
 		CXX,
@@ -242,7 +242,7 @@ static bool preprocess_and_compare()
 	}
 }
 
-static void compile_src_file()
+void compile_src_file()
 {
 	// Only compile if the source is newer then the bin
 	if(preprocess_and_compare() || !fs::exists(bin))
@@ -269,12 +269,12 @@ static void compile_src_file()
 	}
 }
 
-static void print_usage()
+void print_usage()
 {
 	cout << "Usage: cppipe [-g] CPP_FILE [ARGUMENTS]...\n";
 }
 
-static bool is_src_file(const string_view p)
+bool is_src_file(const string_view p)
 {
 	size_t end = p.size() - 1;
 

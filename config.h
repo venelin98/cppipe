@@ -11,10 +11,10 @@ const char* CXX = "g++";
 #define DEBUG_FLAGS "-g"
 
 // ...when not debugging
-#define RELEASE_FLAGS "-Ofast", "-flto", "-s"
+#define RELEASE_FLAGS "-Ofast", "-s"
 
 // ...for both C and C++
-#define CPPFLAGS "-pipe", "-march=native", "-Wall", "-Wextra"
+#define CPPFLAGS  "--whole-program", "-march=native", "-Wall", "-Wextra", "-pipe"
 
 // ...for C
 #define CFLAGS CPPFLAGS
@@ -22,4 +22,4 @@ const char* CXX = "g++";
 // ...for C++
 // cppipe command functions use C++17
 // Wparentheses is disabled on C++ because of the cppipe functions
-#define CXXFLAGS CPPFLAGS, "-std=c++17", "-Wno-parentheses", "-lcppipe"
+#define CXXFLAGS CPPFLAGS, "-std=c++17", "-Wno-parentheses"

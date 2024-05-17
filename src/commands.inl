@@ -13,18 +13,21 @@ enum constants: I32
 	FILE_PERMISIONS = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
 };
 
-static fd_t open_or_die(const char* file, I32 flags)
+namespace _cppipe
 {
-	fd_t fd = open(file, flags, FILE_PERMISIONS);
-	if(fd == -1)
+	inline fd_t open_or_die(const char* file, I32 flags)
 	{
-		std::cerr << "Can't open: " << file << ' ' << strerror(errno) << std::endl;
-		exit(1);
+		fd_t fd = open(file, flags, FILE_PERMISIONS);
+		if(fd == -1)
+		{
+			std::cerr << "Can't open: " << file << ' ' << strerror(errno) << std::endl;
+			exit(1);
+		}
+		return fd;
 	}
-	return fd;
 }
 
-RetProc Cmd::operator()(fd_t in, fd_t out, fd_t err)
+inline RetProc Cmd::operator()(fd_t in, fd_t out, fd_t err)
 {
 	Proc p = createProcess(argv.data(), in, out, err);
 
@@ -39,12 +42,12 @@ RetProc Cmd::operator()(fd_t in, fd_t out, fd_t err)
 	return wait(p);
 }
 
-Proc Cmd::detach(fd_t in, fd_t out, fd_t err)
+inline Proc Cmd::detach(fd_t in, fd_t out, fd_t err)
 {
 	return createProcess(argv.data(), in, out, err);
 }
 
-void Cmd::append_args(std::initializer_list<const char*> args)
+inline void Cmd::append_args(std::initializer_list<const char*> args)
 {
 	argv.reserve(argv.size() + args.size());
 	argv.back() = *args.begin();
@@ -53,7 +56,7 @@ void Cmd::append_args(std::initializer_list<const char*> args)
 	argv.push_back(nullptr);
 }
 
-Cmd Cmd::operator+(const char* arg)
+inline Cmd Cmd::operator+(const char* arg)
 {
 	Cmd result(*this);
 	result.argv.back() = arg;
@@ -61,7 +64,7 @@ Cmd Cmd::operator+(const char* arg)
 	return result;
 }
 
-Cmd& Cmd::operator+=(const char* arg)
+inline Cmd& Cmd::operator+=(const char* arg)
 {
 	argv.back() = arg;
 	argv.push_back(nullptr);
@@ -69,7 +72,7 @@ Cmd& Cmd::operator+=(const char* arg)
 }
 
 
-PendingCmd::PendingCmd(const Cmd& origin, fd_t in, fd_t out, fd_t err)
+inline PendingCmd::PendingCmd(const Cmd& origin, fd_t in, fd_t out, fd_t err)
 	: cmd(origin)
 	, in(in)
 	, out(out)
@@ -77,7 +80,7 @@ PendingCmd::PendingCmd(const Cmd& origin, fd_t in, fd_t out, fd_t err)
 	, execed_(false)
 {}
 
-PendingCmd::~PendingCmd()
+inline PendingCmd::~PendingCmd()
 {
 	if(!execed_)
 		operator()();
@@ -89,21 +92,21 @@ PendingCmd::~PendingCmd()
 	/* 	close(err); */
 }
 
-RetProc PendingCmd::operator()()
+inline RetProc PendingCmd::operator()()
 {
 	assert(!execed_ && "Executed command twice");
 	execed_ = true;
 	return cmd(in, out, err);
 }
 
-Proc PendingCmd::detach()
+inline Proc PendingCmd::detach()
 {
 	assert(!execed_ && "Executed command twice");
 	execed_ = true;
 	return cmd.detach(in, out, err);
 }
 
-Proc PendingCmd::detachRedirOut()
+inline Proc PendingCmd::detachRedirOut()
 {
 	assert(!execed_ && "Executed command twice"); assert(out==1 && "already redirected");
 	assert(out==1 && "capturing redirected proccess");
@@ -112,12 +115,12 @@ Proc PendingCmd::detachRedirOut()
 	return createCapProcess(cmd.argv.data(), in, err);
 }
 
-void PendingCmd::cancel()
+inline void PendingCmd::cancel()
 {
 	execed_ = true;
 }
 
-std::string $(const PendingCmd& cmd)
+inline std::string $(const PendingCmd& cmd)
 {
 	Proc p = const_cast<PendingCmd&>(cmd).detachRedirOut();
 
@@ -144,24 +147,24 @@ std::string $(const PendingCmd& cmd)
 	return output;
 }
 
-void exec(const Cmd& cmd)
+inline void exec(const Cmd& cmd)
 {
 	exec_or_die(cmd.argv.data());
 }
 
-PendingCmd operator,(const PendingCmd& cfirst, const Cmd& second)
+inline PendingCmd operator,(const PendingCmd& cfirst, const Cmd& second)
 {
 	auto& first = const_cast<PendingCmd&>(cfirst);
 	first();
 	return PendingCmd(second);
 }
 
-PendingCmd operator,(RetProc, const Cmd& second)
+inline PendingCmd operator,(RetProc, const Cmd& second)
 {
 	return PendingCmd(second);
 }
 
-PendingCmd operator|(const PendingCmd& cfirst, const Cmd& second)
+inline PendingCmd operator|(const PendingCmd& cfirst, const Cmd& second)
 {
 	auto& first = const_cast<PendingCmd&>(cfirst);
 	fd_t firstOut = first.detachRedirOut().out;
@@ -169,7 +172,7 @@ PendingCmd operator|(const PendingCmd& cfirst, const Cmd& second)
 }
 
 
-RetProc operator&&(const PendingCmd& cfirst, const Cmd& csecond)
+inline RetProc operator&&(const PendingCmd& cfirst, const Cmd& csecond)
 {
 	auto& first = const_cast<PendingCmd&>(cfirst);
 	auto& second = const_cast<Cmd&>(csecond);
@@ -181,7 +184,7 @@ RetProc operator&&(const PendingCmd& cfirst, const Cmd& csecond)
 	return firstProc;
 }
 
-RetProc operator&&(RetProc p, const Cmd& ccmd)
+inline RetProc operator&&(RetProc p, const Cmd& ccmd)
 {
 	auto& cmd = const_cast<Cmd&>(ccmd);
 	if(p)
@@ -190,7 +193,7 @@ RetProc operator&&(RetProc p, const Cmd& ccmd)
 	return p;
 }
 
-RetProc operator||(const PendingCmd& cfirst, const Cmd& csecond)
+inline RetProc operator||(const PendingCmd& cfirst, const Cmd& csecond)
 {
 	auto& first = const_cast<PendingCmd&>(cfirst);
 	auto& second = const_cast<Cmd&>(csecond);
@@ -202,7 +205,7 @@ RetProc operator||(const PendingCmd& cfirst, const Cmd& csecond)
 	return firstProc;
 }
 
-RetProc operator||(RetProc p, const Cmd& ccmd)
+inline RetProc operator||(RetProc p, const Cmd& ccmd)
 {
 	auto& cmd = const_cast<Cmd&>(ccmd);
 	if(!p)
@@ -211,12 +214,12 @@ RetProc operator||(RetProc p, const Cmd& ccmd)
 	return p;
 }
 
-PendingCmd& operator>(const PendingCmd& cmd, const char* file)
+inline PendingCmd& operator>(const PendingCmd& cmd, const char* file)
 {
-	fd_t fd = open_or_die(file, O_WRONLY | O_CREAT);
+	fd_t fd = _cppipe::open_or_die(file, O_WRONLY | O_CREAT);
 	return cmd > fd;
 }
-PendingCmd& operator>(const PendingCmd& ccmd, fd_t fd)
+inline PendingCmd& operator>(const PendingCmd& ccmd, fd_t fd)
 {
 	auto& cmd = const_cast<PendingCmd&>(ccmd);
 	assert(cmd.out == 1 || !"ERROR: Output is already redirected!");
@@ -225,22 +228,22 @@ PendingCmd& operator>(const PendingCmd& ccmd, fd_t fd)
 	return cmd;
 }
 
-PendingCmd& operator>>(const PendingCmd& cmd, const char* file)
+inline PendingCmd& operator>>(const PendingCmd& cmd, const char* file)
 {
-	fd_t fd = open_or_die(file, O_WRONLY | O_CREAT | O_APPEND);
+	fd_t fd = _cppipe::open_or_die(file, O_WRONLY | O_CREAT | O_APPEND);
 	return cmd > fd;
 }
-PendingCmd& operator>>(const PendingCmd& cmd, fd_t fd)
+inline PendingCmd& operator>>(const PendingCmd& cmd, fd_t fd)
 {
 	return cmd > fd;
 }
 
-PendingCmd& operator>=(const PendingCmd& cmd, const char* file)
+inline PendingCmd& operator>=(const PendingCmd& cmd, const char* file)
 {
-	fd_t fd = open_or_die(file, O_WRONLY | O_CREAT);
+	fd_t fd = _cppipe::open_or_die(file, O_WRONLY | O_CREAT);
 	return cmd >= fd;
 }
-PendingCmd& operator>=(const PendingCmd& ccmd, fd_t fd)
+inline PendingCmd& operator>=(const PendingCmd& ccmd, fd_t fd)
 {
 	auto& cmd = const_cast<PendingCmd&>(ccmd);
 	assert(cmd.err == 2 || !"ERROR: Error output is already redirected!");
@@ -249,22 +252,22 @@ PendingCmd& operator>=(const PendingCmd& ccmd, fd_t fd)
 	return cmd;
 }
 
-PendingCmd& operator>>=(const PendingCmd& cmd, const char* file)
+inline PendingCmd& operator>>=(const PendingCmd& cmd, const char* file)
 {
-	fd_t fd = open_or_die(file, O_WRONLY | O_CREAT | O_APPEND);
+	fd_t fd = _cppipe::open_or_die(file, O_WRONLY | O_CREAT | O_APPEND);
 	return cmd >= fd;
 }
-PendingCmd& operator>>=(const PendingCmd& cmd, fd_t fd)
+inline PendingCmd& operator>>=(const PendingCmd& cmd, fd_t fd)
 {
 	return cmd >= fd;
 }
 
-PendingCmd& operator<(const PendingCmd& cmd, const char* file)
+inline PendingCmd& operator<(const PendingCmd& cmd, const char* file)
 {
-	fd_t fd = open_or_die(file, O_RDONLY);
+	fd_t fd = _cppipe::open_or_die(file, O_RDONLY);
 	return cmd < fd;
 }
-PendingCmd& operator<(const PendingCmd& ccmd, fd_t fd)
+inline PendingCmd& operator<(const PendingCmd& ccmd, fd_t fd)
 {
 	auto& cmd = const_cast<PendingCmd&>(ccmd);
 	assert(cmd.in == 0 || !"ERROR: Input is already redirected!");
@@ -273,7 +276,7 @@ PendingCmd& operator<(const PendingCmd& ccmd, fd_t fd)
 	return cmd;
 }
 
-PendingCmd operator&(const PendingCmd& cfirst, const Cmd& second)
+inline PendingCmd operator&(const PendingCmd& cfirst, const Cmd& second)
 {
 	const_cast<PendingCmd&>(cfirst).detach();
 	return PendingCmd(second);

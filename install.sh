@@ -5,24 +5,17 @@ cd src
 # Install location
 PREFIX=/usr/local
 
-# Compile lib
-options="-std=c++17 -Ofast -flto -march=native -DNDEBUG -Wall -Wextra -Wno-parentheses -Wno-unused-result -s -pipe"
-# options="-std=c++17 -g"
-g++ -c $options commands.cpp childProcess.cpp
-
-# Create lib
-ar rc libcppipe.a commands.o childProcess.o
-mv libcppipe.a ${PREFIX}/lib
-rm commands.o childProcess.o
 
 # Compile cppipe
-g++ -o cppipe $options cppipe.cpp -lcppipe
+options="-std=c++17 -Ofast --whole-program -march=native -DNDEBUG -Wall -Wextra -Wno-parentheses -Wno-unused-result -s -pipe"
+# options="-std=c++17 -g"
+g++ -o cppipe $options cppipe.cpp
 chmod 755 cppipe
 mv cppipe ${PREFIX}/bin
 
 # Install headers
 mkdir -p ${PREFIX}/include/cppipe
-cp basicTypes.h commands.hpp childProcess.hpp ${PREFIX}/include/cppipe
+cp basicTypes.h commands.hpp commands.inl childProcess.hpp childProcess.inl ${PREFIX}/include/cppipe
 
 # Clear old cache
 rm -rf ~/.cache/cppipe ${XDG_CACHE_HOME}/cppipe
