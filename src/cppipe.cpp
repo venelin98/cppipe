@@ -197,8 +197,8 @@ bool preprocess_and_compare()
 	Cmd preprocess(
 		CXX,
 		"-E",		// preprocess only
-		"-P",		// don't generate linemarkers in the output to reduce file size
-		src_file.c_str()
+		src_file.c_str(),
+		CXXFLAGS
 		);
 	if(!debug)
 		preprocess +=  "-DNDEBUG";
