@@ -36,8 +36,8 @@ struct MappedFile		// todo: move to utils
 // process the args until the src file arg is found, return its index
 int parse_args_until_src(int argc, char* argv[]);
 
-// find the cpp to run, if it doesn't exist, exit program
-fs::path find_path_to_cpp(string_view src_file);
+// find the source file to run, if it doesn't exist, exit program
+fs::path find_path_to_src(string_view src_file);
 
 // find the path of the cache for the given src_file path
 fs::path get_cache_dir_path(const fs::path& src_file);
@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
 	int src_arg = parse_args_until_src(argc, argv);
 
 	// Init context
-	src_file = find_path_to_cpp( argv[src_arg] );
+	src_file = find_path_to_src( argv[src_arg] );
 	src_type = find_src_type( argv[src_arg] );
 	cache_dir = get_cache_dir_path(src_file);
 	bin = cache_dir / (debug ? DEBUG_PREFIX : "") += src_file.filename();
@@ -112,7 +112,7 @@ int parse_args_until_src(int argc, char* argv[])
 		if( arg ==  "--help" )
 		{
 			print_usage();
-			cout << "Compile and run C++ source CPP_FILE that uses the cppipe library.\n"
+			cout << "Compile and run C/C++ source FILE.\n"
 				"Pass the ARGUMENTS to the compiled binary.\n"
 				"The binaries are cached and recompiled only if the source or it's headers have changed.\n"
 				"-g debug the binary, asserts are also enabled\n";
@@ -139,7 +139,7 @@ int parse_args_until_src(int argc, char* argv[])
 	return src_arg;
 }
 
-fs::path find_path_to_cpp(string_view src_file)
+fs::path find_path_to_src(string_view src_file)
 {
 	if(fs::exists(src_file))	// found relative to CWD
 	{
@@ -172,7 +172,7 @@ fs::path find_path_to_cpp(string_view src_file)
 		}
 	}
 
-	// Couln't find the cpp
+	// Couln't find the src
 	cerr << "File: " << src_file << " doesn't exist\n";
 	exit(1);
 }
@@ -315,7 +315,7 @@ void compile_src_file()
 
 void print_usage()
 {
-	cout << "Usage: cppipe [-g] CPP_FILE [ARGUMENTS]...\n";
+	cout << "Usage: cppipe [-g] FILE [ARGUMENTS]...\n";
 }
 
 SrcType find_src_type(const string_view p)
