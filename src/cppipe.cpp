@@ -14,6 +14,9 @@
 using namespace std;
 namespace fs = std::filesystem;
 
+namespace
+{
+
 struct MappedFile		// todo: move to utils
 {
 	// ~MappedFile()
@@ -55,6 +58,8 @@ fs::path src_file;
 fs::path cache_dir;
 fs::path bin;   // cache bins to avoid recompiles
 
+}
+
 int main(int argc, char* argv[])
 {
 	int src_arg = parse_args_until_src(argc, argv);
@@ -80,6 +85,9 @@ int main(int argc, char* argv[])
 		run += argv[i];
 	exec(run);
 }
+
+namespace
+{
 
 int parse_args_until_src(int argc, char* argv[])
 {
@@ -284,4 +292,6 @@ bool is_src_file(const string_view p)
 
 	else
 		return false;
+}
+
 }

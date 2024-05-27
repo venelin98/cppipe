@@ -1,10 +1,13 @@
 // C compiler
-const char* CC  = "gcc";
+const char* CC  = "cc";
 
 // C++ compiler
-const char* CXX = "g++";
+const char* CXX = "c++";
 
+// The compilation options are chosen with gcc in mind, but clang should also work
+// Other compilers are not tested, but may work
 // You can read about gcc options by running "man gcc"
+
 // Compiler options to use...
 
 // ...when debugging
@@ -14,7 +17,7 @@ const char* CXX = "g++";
 #define RELEASE_FLAGS "-Ofast", "-s"
 
 // ...for both C and C++
-#define CPPFLAGS  "--whole-program", "-march=native", "-Wall", "-Wextra", "-pipe"
+#define CPPFLAGS  "-fwhole-program", "-march=native", "-Wall", "-Wextra", "-pipe"
 
 // ...for C
 #define CFLAGS CPPFLAGS
