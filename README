@@ -1,6 +1,6 @@
 cppipe - C Plus Pipe
 ====================
-cppipe is a utility that allows you to use C/C++ programs as scripts.
+cppipe is a utility for Linux that allows you to use C/C++ programs as scripts.
 it also offers a shell like syntax for seamless command execution
 
 In this way your scripts can benefit from increased control and speed, while
