@@ -1,7 +1,5 @@
-support C
 github
 man
-.cppipe file extension
 tips
 
 ?

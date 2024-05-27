@@ -14,6 +14,12 @@
 using namespace std;
 namespace fs = std::filesystem;
 
+enum SrcType
+{
+	C,
+	CPP
+};
+
 namespace
 {
 
@@ -48,13 +54,14 @@ void compile_src_file();
 
 void print_usage();
 
-bool is_src_file(string_view path);
+SrcType find_src_type(string_view path);
 
 const char DEBUG_PREFIX[] = "__DBG";
 
 // Context
 bool debug = false;
 fs::path src_file;
+SrcType src_type;
 fs::path cache_dir;
 fs::path bin;   // cache bins to avoid recompiles
 
@@ -66,6 +73,7 @@ int main(int argc, char* argv[])
 
 	// Init context
 	src_file = find_path_to_cpp( argv[src_arg] );
+	src_type = find_src_type( argv[src_arg] );
 	cache_dir = get_cache_dir_path(src_file);
 	bin = cache_dir / (debug ? DEBUG_PREFIX : "") += src_file.filename();
 
@@ -110,11 +118,11 @@ int parse_args_until_src(int argc, char* argv[])
 				"-g debug the binary, asserts are also enabled\n";
 			exit(0);
 		}
-
 		else if( arg == "-g" )
+		{
 			debug = true;
-
-		else if( is_src_file(arg) )
+		}
+		else		// Then treat it as the src_arg
 		{
 			src_arg = i;
 			break;
@@ -203,15 +211,30 @@ MappedFile mapfile_for_writing(const fs::path& file)
 bool preprocess_and_compare()
 {
 	Cmd preprocess(
-		CXX,
-		"-E",		// preprocess only
-		src_file.c_str(),
-		CXXFLAGS
+		src_type == SrcType::C ? CC : CXX,
+		"-E"		// preprocess only
 		);
+
+	if(src_type == SrcType::C)
+	{
+		for(const char* flag: { CFLAGS })
+			preprocess += flag;
+	}
+	else
+	{
+		for(const char* flag: { CXXFLAGS })
+			preprocess += flag;
+		preprocess += "-xc++"; // treat the file as a cpp
+	}
+
+	preprocess += src_file.c_str();
+
+
 	if(!debug)
 		preprocess +=  "-DNDEBUG";
 
-	fs::path old_pp_path = cache_dir / (debug ? DEBUG_PREFIX : "") += src_file.stem() += ".ii";
+	fs::path old_pp_path = cache_dir / (debug ? DEBUG_PREFIX : "") += src_file.stem()
+		+= (src_type == SrcType::C ? ".i" : ".ii");
 
 	string new_pp = $(preprocess);
 
@@ -255,13 +278,26 @@ void compile_src_file()
 	// Only compile if the source is newer then the bin
 	if(preprocess_and_compare() || !fs::exists(bin))
 	{
-		string preprocessed_file = cache_dir / src_file.stem() += ".ii"; // todo: duplicates with old_pp_path // todo: support C
+		string preprocessed_file = cache_dir / src_file.stem() +=
+			(src_type == SrcType::C ? ".i" : ".ii"); // todo: duplicates with old_pp_path
 		Cmd compile(
-			CXX,
+			src_type == SrcType::C ? CC : CXX,
 			preprocessed_file.c_str(),
-			"-o", bin.c_str(),
-			CXXFLAGS
+			"-o", bin.c_str()
 			);
+
+		if(src_type == SrcType::C)
+		{
+			for(const char* flag: { CFLAGS })
+				compile += flag;
+		}
+		else
+		{
+			for(const char* flag: { CXXFLAGS })
+				compile += flag;
+		}
+
+
 
 		if(debug)
 		{
@@ -282,16 +318,23 @@ void print_usage()
 	cout << "Usage: cppipe [-g] CPP_FILE [ARGUMENTS]...\n";
 }
 
-bool is_src_file(const string_view p)
+SrcType find_src_type(const string_view p)
 {
 	size_t end = p.size() - 1;
 
-	if( (p.size() > 4 && p[end-3] == '.' && p[end-2] == 'c' && p[end-1] == 'p' && p[end] == 'p')
-	    || (p.size() > 2 && p[end-1] == '.' && p[end] == 'c'))
-		return  true;
+	// if(p.size() > 4 && p[end-3] == '.' && p[end-2] == 'c' && p[end-1] == 'p' && p[end] == 'p')
+	// {
+	// 	src_type = SrcType::CPP
+	// }
 
-	else
-		return false;
+	if( p.size() > 2 && p[end-1] == '.' && p[end] == 'c' )
+	{
+		return SrcType::C;
+	}
+	else			// treat it as cpp
+	{
+		return SrcType::CPP;
+	}
 }
 
 }

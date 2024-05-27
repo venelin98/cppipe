@@ -3,11 +3,13 @@
 int main()
 {
 	int* x;
-	void* y;
-	x = y;
+	void* y = 0;
 
-	char s[16];
-	scanf("%s", s);
-	printf("%s\n", s);
+	x = y;			/* should only work on C */
+	if(x == 0)
+	{
+		printf("C compilation OK!\n");
+	}
+
 	return 0;
 }

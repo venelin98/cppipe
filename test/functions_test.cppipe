@@ -1,3 +1,5 @@
+// Test cppipe functions
+
 #include <cppipe/commands.hpp>
 
 #include <sys/wait.h>
@@ -26,7 +28,10 @@ int main(int argc, char* argv[])
 
 	string out2 = $(echo + "abc" + "def");
 	if(auto len = out2.size(); len != 8)
+	{
 		cerr << "FAILURE: unexpected output length " << len << endl;
+		exit(1);
+	}
 
 	Cmd success("echo", "OK 1/11");
 	Cmd fail("mkdir", ".");
