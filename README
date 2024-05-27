@@ -16,6 +16,10 @@ How to execute a C/C++ source file
 ----------------------------------
 cppipe PATH_TO_SRC [ARGUMENTS_FOR_YOUR_PROGRAM]...
 
-Webpage
+Example
 -------
+You can see an example of the command call syntax in test/functions_test.cppipe
+
+Webpage with more info
+----------------------
 https://vene.volconst.com/en/cppipe

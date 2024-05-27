@@ -1,17 +1,16 @@
-github
 man
 tips
+openBSD support
 
 ?
 precompiled header cppipe.h
 -Wno-unused-result in install.sh
 file operations, lack of uniformity (C++ vs POSIX)
-split
 Check all return codes and report errors
 close files on destruction
-make portable
 shaded obj
 uninstall
 throw when a command couldnt be ran
 improve debug (the src file shown is the .ii)
 no optimizations option
+split
