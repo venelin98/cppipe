@@ -6,7 +6,7 @@ it also offers a shell like syntax for seamless command execution
 In this way your scripts can benefit from increased control and speed, while
 maintaining a lot of the potential for simple command call syntax.
 
-C/C++ binaries are cached to avoid recompilation.
+C/C++ programs are cached and only recompiled if needed.
 
 Installation
 ------------
