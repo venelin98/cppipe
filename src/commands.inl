@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include "commands.hpp"

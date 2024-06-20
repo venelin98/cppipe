@@ -4,8 +4,7 @@ const char* CC  = "cc";
 // C++ compiler
 const char* CXX = "c++";
 
-// The compilation options are chosen with gcc in mind, but clang should also work
-// Other compilers are not tested, but may work
+// Options are based on gcc, but should work for clang as well
 // You can read about gcc options by running "man gcc"
 
 // Compiler options to use...
