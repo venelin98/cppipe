@@ -213,6 +213,9 @@ bool preprocess_and_compare()
 	Cmd preprocess(
 		src_type == SrcType::C ? CC : CXX,
 		"-E"		// preprocess only
+		#ifdef __OpenBSD__
+		,"-I/usr/local/include" // not included by default on OpenBSD
+		#endif
 		);
 
 	if(src_type == SrcType::C)
