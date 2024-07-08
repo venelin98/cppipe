@@ -140,11 +140,12 @@ inline std::string $(const PendingCmd& cmd)
 		output.resize(output.size() + PIPE_BUF);   // todo: check if we are overallocating
 
 		read_count = read(p.out, &output[i], PIPE_BUF);  // todo: check errno
-		i += read_count;
+		if(read_count > 0)
+			i += read_count;
 	}
 	while(read_count > 0);
 	// p finished?
-	output.erase(i, output.size() - i);
+	output.erase(i, output.size() - i); // erase the extra elements
 	return output;
 }
 
