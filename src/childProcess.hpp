@@ -1,6 +1,7 @@
 #pragma once
 
 #include "basicTypes.h"
+#include <optional>
 
 struct Proc
 {
@@ -10,20 +11,23 @@ struct Proc
 	fd_t err;
 };
 
-struct RetProc: public Proc		/* returned process */
+/* process that has finished for any reason */
+struct DeadProc: public Proc
 {
-	RetProc(Proc, int status);	/* status as returned by waitpid */
+	DeadProc(Proc, int status);	/* status as returned by waitpid */
 	bool normal_exit;
-	U8 returned;				/* return code */
+	U8 exit_status;				/* only use if normal_exit */
 
 	/* A returned process evaluates to true if it exited normaly and
 	 * returned 0 */
 	explicit operator bool();
-
 };
 
-// Wait for a running proccess to finish
-RetProc wait(Proc);
+/* Wait for a running proccess to finish */
+DeadProc wait(Proc);
+
+/* Check if the Proc has exited and return it's DeadProc if it has */
+std::optional<DeadProc> check_exited(Proc);
 
 enum Redirect: U32
 {

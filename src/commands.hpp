@@ -26,7 +26,7 @@ public:
 	/* Execute the command, if arguments are not given use stdin,out,err
 	   else use the given file desciptors. this can also be used
 	   to redirect err to out by giving err=1 like in shell */
-	RetProc operator()(fd_t in=0, fd_t out=1, fd_t err=2);
+	DeadProc operator()(fd_t in=0, fd_t out=1, fd_t err=2);
 
 	/* Run the command, don't wait to return like shell's & */
 	Proc detach(fd_t in=0, fd_t out=1, fd_t err=2);
@@ -57,7 +57,7 @@ public:
 	PendingCmd& operator=(const PendingCmd&) = delete;
 
 	/* Run the command */
-	RetProc operator()();
+	DeadProc operator()();
 
 	/* Run the command async
 	   shell:   cmd &
@@ -90,12 +90,12 @@ void exec(const Cmd&);    /* todo: take Pending? */
        cd;
 */
 PendingCmd operator,(const PendingCmd&, const Cmd&);
-PendingCmd operator,(RetProc, const Cmd&);
+PendingCmd operator,(DeadProc, const Cmd&);
 /* Forbiden funcion to prevent wrong sequencing such as:
    echo, echo && echo
    here the 2nd and 3rd echos would be ran before 1st
    due to the C++ operator precedence*/
-PendingCmd operator,(const PendingCmd&, RetProc) = delete;
+PendingCmd operator,(const PendingCmd&, DeadProc) = delete;
 
 
 /* Shell pipe operator | - execute two commands, second takes input
@@ -103,15 +103,15 @@ PendingCmd operator,(const PendingCmd&, RetProc) = delete;
 PendingCmd operator|(const PendingCmd&, const Cmd&);
 
 /* Shell operator && - run the second command only if first returns 0 (no errors)*/
-RetProc operator&&(const PendingCmd&, const Cmd&);
-RetProc operator&&(RetProc, const Cmd&);
+DeadProc operator&&(const PendingCmd&, const Cmd&);
+DeadProc operator&&(DeadProc, const Cmd&);
 
 /* Shell operator || - run second only if first returns != 0
    Operator precedence is different from shell, C precendence is && > ||
    so mixing || and && may not compile, but shouldn't cause other issues,
    use () to resolve these cases */
-RetProc operator||(const PendingCmd&, const Cmd&);
-RetProc operator||(RetProc, const Cmd&);
+DeadProc operator||(const PendingCmd&, const Cmd&);
+DeadProc operator||(DeadProc, const Cmd&);
 
 /* Shell operator > - redirect output to file
    shell:   cmd > file 2>&1

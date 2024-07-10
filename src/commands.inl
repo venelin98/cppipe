@@ -28,7 +28,7 @@ namespace _cppipe
 	}
 }
 
-inline RetProc Cmd::operator()(fd_t in, fd_t out, fd_t err)
+inline DeadProc Cmd::operator()(fd_t in, fd_t out, fd_t err)
 {
 	Proc p = createProcess(argv.data(), in, out, err);
 
@@ -93,7 +93,7 @@ inline PendingCmd::~PendingCmd()
 	/* 	close(err); */
 }
 
-inline RetProc PendingCmd::operator()()
+inline DeadProc PendingCmd::operator()()
 {
 	assert(!execed_ && "Executed command twice");
 	execed_ = true;
@@ -161,7 +161,7 @@ inline PendingCmd operator,(const PendingCmd& cfirst, const Cmd& second)
 	return PendingCmd(second);
 }
 
-inline PendingCmd operator,(RetProc, const Cmd& second)
+inline PendingCmd operator,(DeadProc, const Cmd& second)
 {
 	return PendingCmd(second);
 }
@@ -174,11 +174,11 @@ inline PendingCmd operator|(const PendingCmd& cfirst, const Cmd& second)
 }
 
 
-inline RetProc operator&&(const PendingCmd& cfirst, const Cmd& csecond)
+inline DeadProc operator&&(const PendingCmd& cfirst, const Cmd& csecond)
 {
 	auto& first = const_cast<PendingCmd&>(cfirst);
 	auto& second = const_cast<Cmd&>(csecond);
-	RetProc firstProc = first();
+	DeadProc firstProc = first();
 
 	if(firstProc)
 		return second();
@@ -186,7 +186,7 @@ inline RetProc operator&&(const PendingCmd& cfirst, const Cmd& csecond)
 	return firstProc;
 }
 
-inline RetProc operator&&(RetProc p, const Cmd& ccmd)
+inline DeadProc operator&&(DeadProc p, const Cmd& ccmd)
 {
 	auto& cmd = const_cast<Cmd&>(ccmd);
 	if(p)
@@ -195,11 +195,11 @@ inline RetProc operator&&(RetProc p, const Cmd& ccmd)
 	return p;
 }
 
-inline RetProc operator||(const PendingCmd& cfirst, const Cmd& csecond)
+inline DeadProc operator||(const PendingCmd& cfirst, const Cmd& csecond)
 {
 	auto& first = const_cast<PendingCmd&>(cfirst);
 	auto& second = const_cast<Cmd&>(csecond);
-	RetProc firstProc = first();
+	DeadProc firstProc = first();
 
 	if(!firstProc)
 		return second();
@@ -207,7 +207,7 @@ inline RetProc operator||(const PendingCmd& cfirst, const Cmd& csecond)
 	return firstProc;
 }
 
-inline RetProc operator||(RetProc p, const Cmd& ccmd)
+inline DeadProc operator||(DeadProc p, const Cmd& ccmd)
 {
 	auto& cmd = const_cast<Cmd&>(ccmd);
 	if(!p)

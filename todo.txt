@@ -1,6 +1,5 @@
 man
-tips
-openBSD support
+tips (sigaction SIGCHILD, SIG_IGN, SIG_DFL)
 
 ?
 precompiled header cppipe.h

@@ -6,22 +6,49 @@
 #include "childProcess.hpp"
 
 
-inline RetProc::RetProc(Proc origin, int status)
+inline DeadProc::DeadProc(Proc origin, int status)
 	: Proc(origin)
 	, normal_exit(WIFEXITED(status))
-	, returned(WEXITSTATUS(status))
+	, exit_status(WEXITSTATUS(status))
 {}
 
-inline RetProc::operator bool()
+inline DeadProc::operator bool()
 {
-	return normal_exit && returned == 0;
+	return normal_exit && exit_status == 0;
 }
 
-inline RetProc wait(Proc p)
+inline DeadProc wait(Proc p)
 {
 	int status;
-	waitpid(p.pid, &status, 0);
-	return RetProc(p, status);
+	if( waitpid(p.pid, &status, 0) == -1 )
+	{
+		std::cerr << "waitpid encountered an error: " << strerror(errno) << std::endl;
+		exit(1);
+	}
+	return DeadProc(p, status);
+}
+
+inline std::optional<DeadProc> check_exited(Proc p)
+{
+	std::optional<DeadProc> result;
+
+	int status;
+	pid_t rc = waitpid(p.pid, &status, WNOHANG);
+	if(rc == 0)		// still running
+	{
+		result = std::nullopt;
+	}
+	else if(rc == -1)	// waitpid error
+	{
+		std::cerr << "waitpid encountered an error: " << strerror(errno) << std::endl;
+		exit(1);
+	}
+	else			// finished
+	{
+		result = DeadProc(p, status);
+	}
+
+	return result;
 }
 
 namespace _cppipe
