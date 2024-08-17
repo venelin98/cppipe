@@ -1,7 +1,11 @@
 man
 tips (sigaction SIGCHILD, SIG_IGN, SIG_DFL)
+cppipe compile options from tft
+respect CXXFLAGS LDFLAGS
 
 ?
+args before src file go to compiler
+use exceptions (open_or_die)
 precompiled header cppipe.h
 -Wno-unused-result in install.sh
 file operations, lack of uniformity (C++ vs POSIX)
