@@ -125,11 +125,6 @@ inline std::string $(const PendingCmd& cmd)
 {
 	Proc p = const_cast<PendingCmd&>(cmd).detachRedirOut();
 
-	// check output size (not portable?)
-	// int pipe_size;
-	// int rc = ioctl(p.out, FIONREAD, &pipe_size); assert(rc==0);
-	// ioctl(p.out, FIONREAD, &pipe_size);
-
 	// write to the string directly, todo: find a better way
 	std::string output;
 
@@ -145,7 +140,12 @@ inline std::string $(const PendingCmd& cmd)
 	}
 	while(read_count > 0);
 	// p finished?
-	output.erase(i, output.size() - i); // erase the extra elements
+
+	// erase the extra elements
+	output.erase(i, output.size() - i);
+
+	close(p.out);
+
 	return output;
 }
 
@@ -154,36 +154,36 @@ inline void exec(const Cmd& cmd)
 	exec_or_die(cmd.argv.data());
 }
 
-inline PendingCmd operator,(const PendingCmd& cfirst, const Cmd& second)
+inline PendingCmd operator,(const PendingCmd& cleft, const Cmd& right)
 {
-	auto& first = const_cast<PendingCmd&>(cfirst);
-	first();
-	return PendingCmd(second);
+	auto& left = const_cast<PendingCmd&>(cleft);
+	left();
+	return PendingCmd(right);
 }
 
-inline PendingCmd operator,(DeadProc, const Cmd& second)
+inline PendingCmd operator,(DeadProc, const Cmd& right)
 {
-	return PendingCmd(second);
+	return PendingCmd(right);
 }
 
-inline PendingCmd operator|(const PendingCmd& cfirst, const Cmd& second)
+inline PendingCmd operator|(const PendingCmd& cleft, const Cmd& right)
 {
-	auto& first = const_cast<PendingCmd&>(cfirst);
-	fd_t firstOut = first.detachRedirOut().out;
-	return PendingCmd(second, firstOut);
+	auto& left = const_cast<PendingCmd&>(cleft);
+	fd_t leftOut = left.detachRedirOut().out;
+	return PendingCmd(right, leftOut);
 }
 
 
-inline DeadProc operator&&(const PendingCmd& cfirst, const Cmd& csecond)
+inline DeadProc operator&&(const PendingCmd& cleft, const Cmd& cright)
 {
-	auto& first = const_cast<PendingCmd&>(cfirst);
-	auto& second = const_cast<Cmd&>(csecond);
-	DeadProc firstProc = first();
+	auto& left = const_cast<PendingCmd&>(cleft);
+	auto& right = const_cast<Cmd&>(cright);
+	DeadProc leftProc = left();
 
-	if(firstProc)
-		return second();
+	if(leftProc)
+		return right();
 
-	return firstProc;
+	return leftProc;
 }
 
 inline DeadProc operator&&(DeadProc p, const Cmd& ccmd)
@@ -195,16 +195,16 @@ inline DeadProc operator&&(DeadProc p, const Cmd& ccmd)
 	return p;
 }
 
-inline DeadProc operator||(const PendingCmd& cfirst, const Cmd& csecond)
+inline DeadProc operator||(const PendingCmd& cleft, const Cmd& cright)
 {
-	auto& first = const_cast<PendingCmd&>(cfirst);
-	auto& second = const_cast<Cmd&>(csecond);
-	DeadProc firstProc = first();
+	auto& left = const_cast<PendingCmd&>(cleft);
+	auto& right = const_cast<Cmd&>(cright);
+	DeadProc leftProc = left();
 
-	if(!firstProc)
-		return second();
+	if(!leftProc)
+		return right();
 
-	return firstProc;
+	return leftProc;
 }
 
 inline DeadProc operator||(DeadProc p, const Cmd& ccmd)
@@ -278,8 +278,8 @@ inline PendingCmd& operator<(const PendingCmd& ccmd, fd_t fd)
 	return cmd;
 }
 
-inline PendingCmd operator&(const PendingCmd& cfirst, const Cmd& second)
+inline PendingCmd operator&(const PendingCmd& cleft, const Cmd& right)
 {
-	const_cast<PendingCmd&>(cfirst).detach();
-	return PendingCmd(second);
+	const_cast<PendingCmd&>(cleft).detach();
+	return PendingCmd(right);
 }

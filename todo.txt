@@ -1,5 +1,6 @@
 man
 tips (sigaction SIGCHILD, SIG_IGN, SIG_DFL)
+make sure file descriptors are closed when no longer used
 cppipe compile options from tft
 respect CXXFLAGS LDFLAGS
 
@@ -10,7 +11,6 @@ precompiled header cppipe.h
 -Wno-unused-result in install.sh
 file operations, lack of uniformity (C++ vs POSIX)
 Check all return codes and report errors
-close files on destruction
 shaded obj
 uninstall
 throw when a command couldnt be ran
