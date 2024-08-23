@@ -109,8 +109,8 @@ inline Proc PendingCmd::detach()
 
 inline Proc PendingCmd::detachRedirOut()
 {
-	assert(!execed_ && "Executed command twice"); assert(out==1 && "already redirected");
-	assert(out==1 && "capturing redirected proccess");
+	assert(!execed_ && "Executed command twice");
+	assert(out==1 && "Capturing redirected proccess");
 
 	execed_ = true;
 	return createCapProcess(cmd.argv.data(), in, err);
@@ -224,7 +224,7 @@ inline PendingCmd& operator>(const PendingCmd& cmd, const char* file)
 inline PendingCmd& operator>(const PendingCmd& ccmd, fd_t fd)
 {
 	auto& cmd = const_cast<PendingCmd&>(ccmd);
-	assert(cmd.out == 1 || !"ERROR: Output is already redirected!");
+	assert(cmd.out == 1 && "ERROR: Output is already redirected!");
 
 	cmd.out = fd;
 	return cmd;
@@ -248,7 +248,7 @@ inline PendingCmd& operator>=(const PendingCmd& cmd, const char* file)
 inline PendingCmd& operator>=(const PendingCmd& ccmd, fd_t fd)
 {
 	auto& cmd = const_cast<PendingCmd&>(ccmd);
-	assert(cmd.err == 2 || !"ERROR: Error output is already redirected!");
+	assert(cmd.err == 2 && "ERROR: Error output is already redirected!");
 
 	cmd.err = fd;
 	return cmd;
@@ -272,7 +272,7 @@ inline PendingCmd& operator<(const PendingCmd& cmd, const char* file)
 inline PendingCmd& operator<(const PendingCmd& ccmd, fd_t fd)
 {
 	auto& cmd = const_cast<PendingCmd&>(ccmd);
-	assert(cmd.in == 0 || !"ERROR: Input is already redirected!");
+	assert(cmd.in == 0 && "ERROR: Input is already redirected!");
 
 	cmd.in = fd;
 	return cmd;
