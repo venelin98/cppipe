@@ -281,35 +281,27 @@ void compile_src_file()
 	// Only compile if the source is newer then the bin
 	if(preprocess_and_compare() || !fs::exists(bin))
 	{
-		string preprocessed_file = cache_dir / src_file.stem() +=
-			(src_type == SrcType::C ? ".i" : ".ii"); // todo: duplicates with old_pp_path
+		string preprocessed_file = cache_dir / (debug ? DEBUG_PREFIX : "") += src_file.stem()
+			+= (src_type == SrcType::C ? ".i" : ".ii");  // todo: duplicates with old_pp_path (std::optional?)
+
 		Cmd compile(
 			src_type == SrcType::C ? CC : CXX,
 			preprocessed_file.c_str(),
 			"-o", bin.c_str()
 			);
 
-		if(src_type == SrcType::C)
-		{
-			for(const char* flag: { CFLAGS })
-				compile += flag;
-		}
-		else
-		{
-			for(const char* flag: { CXXFLAGS })
-				compile += flag;
-		}
 
+		if(src_type == SrcType::C)
+			compile.append_args({ CFLAGS });
+		else
+			compile.append_args({ CXXFLAGS });
 
 
 		if(debug)
-		{
 			compile.append_args({ DEBUG_FLAGS });
-		}
 		else
-		{
 			compile.append_args({ RELEASE_FLAGS });
-		}
+
 
 		if( !compile() )	 // if failed to compile
 			exit(1);
