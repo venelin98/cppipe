@@ -22,8 +22,8 @@ int main(int argc, char* argv[])
 	Cmd echo("echo");
 	Cmd rm("rm");
 
-	string out1 = $(ll | grep + "cpp" | grep + "child");
-	if(out1.find("childProcess.cpp") != string::npos)
+	string out1 = $(ll + "src" | grep + "inl" | grep + "child");
+	if(out1.find("childProcess.inl") != string::npos)
 		cout << "OK 0/11" << endl;
 
 	string out2 = $(echo + "abc" + "def");
