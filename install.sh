@@ -15,7 +15,8 @@ mv cppipe ${PREFIX}/bin
 # Install headers
 mkdir -p ${PREFIX}/include/cppipe
 cp basicTypes.h commands.hpp commands.inl childProcess.hpp childProcess.inl ${PREFIX}/include/cppipe
-chmod 644 ${PREFIX}/include/cppipe
+chmod 755 ${PREFIX}/include/cppipe
+chmod 644 ${PREFIX}/include/cppipe/*
 
 # Clear old cache
 rm -rf ~/.cache/cppipe ${XDG_CACHE_HOME}/cppipe
