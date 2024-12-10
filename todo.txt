@@ -5,6 +5,8 @@ cppipe compile options from tft
 respect CXXFLAGS LDFLAGS
 
 ?
+run(cmd)
+string args
 args before src file go to compiler
 use exceptions (open_or_die)
 precompiled header cppipe.h

@@ -283,3 +283,10 @@ inline PendingCmd operator&(const PendingCmd& cleft, const Cmd& right)
 	const_cast<PendingCmd&>(cleft).detach();
 	return PendingCmd(right);
 }
+
+inline std::ostream& operator<<(std::ostream& s, const Cmd& c)
+{
+	for(size_t i = 0; i < c.argv.size() - 1; ++i)
+		s << '"' << c.argv[i] << '"' << ' ';
+	return s << std::endl;
+}

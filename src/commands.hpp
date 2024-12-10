@@ -161,4 +161,7 @@ PendingCmd operator&(const PendingCmd&, const Cmd&);
 */
 std::string $(const PendingCmd&);
 
+/* Operator<< for printing */
+std::ostream& operator<<(std::ostream&, const Cmd&);
+
 #include "commands.inl"
