@@ -26,10 +26,10 @@ public:
 	/* Execute the command, if arguments are not given use stdin,out,err
 	   else use the given file desciptors. this can also be used
 	   to redirect err to out by giving err=1 like in shell */
-	DeadProc operator()(fd_t in=0, fd_t out=1, fd_t err=2);
+	DeadProc operator()(fd_t in=0, fd_t out=1, fd_t err=2) const;
 
 	/* Run the command, don't wait to return like shell's & */
-	Proc detach(fd_t in=0, fd_t out=1, fd_t err=2);
+	Proc detach(fd_t in=0, fd_t out=1, fd_t err=2) const;
 
 	/* Append arguments */
 	void append_args(std::initializer_list<const char*>);
@@ -80,6 +80,9 @@ private:
 
 /* Like shell's exec */
 void exec(const Cmd&);    /* todo: take Pending? */
+
+/* Execute the command, like the operator() */
+DeadProc run(Cmd&);
 
 /* Run commands in sequence
    shell:
