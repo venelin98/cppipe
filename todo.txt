@@ -3,6 +3,7 @@ tips (sigaction SIGCHILD, SIG_IGN, SIG_DFL)
 make sure file descriptors are closed when no longer used
 cppipe compile options from tft
 respect CXXFLAGS LDFLAGS
+remove append_args
 
 ?
 run(cmd)

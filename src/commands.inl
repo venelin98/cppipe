@@ -28,7 +28,7 @@ namespace _cppipe
 	}
 }
 
-inline DeadProc Cmd::operator()(fd_t in, fd_t out, fd_t err)
+inline DeadProc Cmd::operator()(fd_t in, fd_t out, fd_t err) const
 {
 	Proc p = createProcess(argv.data(), in, out, err);
 
@@ -43,7 +43,7 @@ inline DeadProc Cmd::operator()(fd_t in, fd_t out, fd_t err)
 	return wait(p);
 }
 
-inline Proc Cmd::detach(fd_t in, fd_t out, fd_t err)
+inline Proc Cmd::detach(fd_t in, fd_t out, fd_t err) const
 {
 	return createProcess(argv.data(), in, out, err);
 }
@@ -152,6 +152,11 @@ inline std::string $(const PendingCmd& cmd)
 inline void exec(const Cmd& cmd)
 {
 	exec_or_die(cmd.argv.data());
+}
+
+DeadProc run(const Cmd& cmd)
+{
+	return cmd();
 }
 
 inline PendingCmd operator,(const PendingCmd& cleft, const Cmd& right)
@@ -284,9 +289,9 @@ inline PendingCmd operator&(const PendingCmd& cleft, const Cmd& right)
 	return PendingCmd(right);
 }
 
-inline std::ostream& operator<<(std::ostream& s, const Cmd& c)
+inline std::ostream& operator<<(std::ostream& s, const Cmd& cmd)
 {
-	for(size_t i = 0; i < c.argv.size() - 1; ++i)
-		s << '"' << c.argv[i] << '"' << ' ';
-	return s << std::endl;
+	for(size_t i = 0; i < cmd.argv.size() - 1; ++i)
+		s << '"' << cmd.argv[i] << '"' << ' ';
+	return s;
 }
