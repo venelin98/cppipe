@@ -8,7 +8,7 @@ int main()
 	x = y;			/* should only work on C */
 	if(x == 0)
 	{
-		printf("C compilation OK!\n");
+		printf("C compilation: OK!\n");
 	}
 
 	return 0;

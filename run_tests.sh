@@ -2,14 +2,18 @@
 set -e
 
 # Test cppipe functions
-OKs=$(cppipe test/functions_test.cppipe | grep OK | wc -l)
+OKs=$(cppipe test/functions_test.cppipe 2>/dev/null | grep OK | wc -l)
 if ! [ $OKs = 12 ]
 then
-    echo "EXPECTED 1 OKs, got $OKs"
+    echo "Functions test failed: EXPECTED 12 OKs, got $OKs"
     exit 1
 fi
+echo Functions test OK!
 
 # Test on a C file
-echo OK | cppipe test/c_file.c
+cppipe test/c_file.c
+
+# Test the cppipe command
+./test/command_line_test.sh
 
 echo ALL TESTS PASSED
