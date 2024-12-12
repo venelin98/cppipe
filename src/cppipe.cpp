@@ -59,6 +59,7 @@ SrcType find_src_type(string_view path);
 const char DEBUG_PREFIX[] = "__DBG";
 
 // Context
+fs::path HOME;
 bool debug = false;
 fs::path src_file;
 SrcType src_type;
@@ -72,6 +73,7 @@ int main(int argc, char* argv[])
 	int src_arg = parse_args_until_src(argc, argv);
 
 	// Init context
+	HOME = getenv("HOME");
 	src_file = find_path_to_src( argv[src_arg] );
 	src_type = find_src_type( argv[src_arg] );
 	cache_dir = get_cache_dir_path(src_file);
@@ -146,12 +148,6 @@ fs::path find_path_to_src(string_view src_file)
 		return src_file;
 	}
 
-	// Search in ~/cppipe
-	if(fs::path p = fs::path(getenv("HOME")) / "cppipe" / src_file; fs::exists(p))
-	{
-		return p;
-	}
-
 	// Search files on CPPIPEPATH
 	const char* cppipepath_var = getenv("CPPIPEPATH");
 	if(cppipepath_var)	// is set
@@ -161,21 +157,22 @@ fs::path find_path_to_src(string_view src_file)
 		    ;
 		    begin = end+1, end = cppipepath.find(':', begin) )
 		{
-			const string_view path_entry = cppipepath.substr(begin, end - begin);
-			if( fs::is_directory(path_entry) )
+			const fs::path path_entry = cppipepath.substr(begin, end - begin);
+
+			if( fs::path p = path_entry / src_file; fs::exists(p) )
 			{
-				for(const fs::directory_entry& e: fs::directory_iterator(path_entry))
-				{
-					if(fs::is_regular_file(e) && e.path().filename() == src_file)
-					{
-						return e;
-					}
-				}
+				return p;
 			}
 
 			if(end == string::npos)
 				break;
 		}
+	}
+
+	// Search in ~/cppipe
+	if(fs::path p = HOME / "cppipe" / src_file; fs::exists(p)) // todo: what if ~/cppipe/../... matches
+	{
+		return p;
 	}
 
 	// Couln't find the src
@@ -193,8 +190,7 @@ fs::path get_cache_dir_path(const fs::path& src_file)
 	}
 	else
 	{
-		char* home( getenv("HOME") );
-		cache_dir = home;
+		cache_dir = HOME;
 		cache_dir /= ".cache/cppipe";
 	}
 	cache_dir += fs::canonical( src_file ).parent_path();
