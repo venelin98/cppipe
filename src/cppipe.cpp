@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <string_view>
+#include <optional>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -45,9 +46,9 @@ fs::path get_cache_dir_path(const fs::path& src_file);
 // map file in memory with write persmissions
 MappedFile mapfile_for_writing(const fs::path& file);
 
-// preprocess the src file and compare the result to the previous version, return weather it's changed
-// remove cached bin if true
-bool preprocess_and_compare();
+// preprocess the src file, compare and overwrite the result to the previous version
+// return the path of the preprocessed file if it's different
+optional<fs::path> preprocess_and_compare();
 
 // only recompile if changes are present
 void compile_src_file();
@@ -114,10 +115,13 @@ int parse_args_until_src(int argc, char* argv[])
 		if( arg ==  "--help" )
 		{
 			print_usage();
-			cout << "Compile and run C/C++ source FILE.\n"
-				"Pass the ARGUMENTS to the compiled binary.\n"
-				"The binaries are cached and recompiled only if the source or it's headers have changed.\n"
-				"-g debug the binary, asserts are also enabled\n";
+			cout << "Compile and run C/C++ source FILE\n"
+				"Pass the ARGUMENTS to the compiled binary\n"
+				"The binaries are cached and recompiled only if the source or it's headers have changed\n\n"
+				"Options:\n"
+				"-g debug the binary, asserts are also enabled\n\n"
+				"Environment variables:\n"
+				"CPPIPEPATH - ':'-separated list of directories to prepend to the FILE search path\n";
 			exit(0);
 		}
 		else if( arg == "-g" )
@@ -154,7 +158,7 @@ fs::path find_path_to_src(string_view src_file)
 	{
 		const string_view cppipepath = cppipepath_var;
 		for(size_t begin = 0, end = cppipepath.find(':');
-		    ;
+		    end != string::npos;
 		    begin = end+1, end = cppipepath.find(':', begin) )
 		{
 			const fs::path path_entry = cppipepath.substr(begin, end - begin);
@@ -163,9 +167,6 @@ fs::path find_path_to_src(string_view src_file)
 			{
 				return p;
 			}
-
-			if(end == string::npos)
-				break;
 		}
 	}
 
@@ -190,8 +191,7 @@ fs::path get_cache_dir_path(const fs::path& src_file)
 	}
 	else
 	{
-		cache_dir = HOME;
-		cache_dir /= ".cache/cppipe";
+		cache_dir = HOME / ".cache/cppipe";
 	}
 	cache_dir += fs::canonical( src_file ).parent_path();
 	fs::create_directories(cache_dir);
@@ -210,7 +210,7 @@ MappedFile mapfile_for_writing(const fs::path& file)
 	return res;
 }
 
-bool preprocess_and_compare()
+optional<fs::path> preprocess_and_compare()
 {
 	Cmd preprocess(
 		src_type == SrcType::C ? CC : CXX,
@@ -220,27 +220,29 @@ bool preprocess_and_compare()
 		#endif
 		);
 
+	// Add preprocessor flags
 	if(src_type == SrcType::C)
 	{
-		for(const char* flag: { CFLAGS })
-			preprocess += flag;
+		preprocess.append_args({ CFLAGS });
 	}
 	else
 	{
-		for(const char* flag: { CXXFLAGS })
-			preprocess += flag;
+		preprocess.append_args({ CXXFLAGS });
 		preprocess += "-xc++"; // treat the file as a cpp
 	}
 
+	// File to be preprocessed
 	preprocess += src_file.c_str();
 
 
 	if(!debug)
 		preprocess +=  "-DNDEBUG";
 
+	// Preprocessed file from the previous run
 	fs::path old_pp_path = cache_dir / (debug ? DEBUG_PREFIX : "") += src_file.stem()
 		+= (src_type == SrcType::C ? ".i" : ".ii");
 
+	// Result of preprocessing as string
 	string new_pp = $(preprocess);
 
 	if( fs::exists(old_pp_path) ) // todo: clean up if else blocks
@@ -250,45 +252,43 @@ bool preprocess_and_compare()
 			MappedFile old_pp = mapfile_for_writing(old_pp_path);
 			if( !memcmp(old_pp.data, &new_pp[0], old_pp.len) ) // unchanged
 			{
-				return false;
+				return nullopt;
 			}
 			else
 			{
 				memcpy(old_pp.data, &new_pp[0], old_pp.len);
 				munmap(old_pp.data, old_pp.len);
-				return true;
+				return old_pp_path;
 			}
 			// todo
 			// munmap(data, len);
 		}
 		else
 		{
-			fs::remove(bin); // rm old bin
 			ofstream pp_file(old_pp_path);
 			pp_file << new_pp;
-			return true;
+			return old_pp_path;
 		}
 	}
 	else
 	{
-		fs::remove(bin); // rm old bin
 		ofstream pp_file(old_pp_path);
 		pp_file << new_pp;
-		return true;
+		return old_pp_path;
 	}
 }
 
 void compile_src_file()
 {
+	optional<fs::path> new_preprocessed = preprocess_and_compare();
+
 	// Only compile if the source is newer then the bin
-	if(preprocess_and_compare() || !fs::exists(bin))
+	if(new_preprocessed || !fs::exists(bin))
 	{
-		string preprocessed_file = cache_dir / (debug ? DEBUG_PREFIX : "") += src_file.stem()
-			+= (src_type == SrcType::C ? ".i" : ".ii");  // todo: duplicates with old_pp_path (std::optional?)
 
 		Cmd compile(
 			src_type == SrcType::C ? CC : CXX,
-			preprocessed_file.c_str(),
+			new_preprocessed->c_str(),
 			"-o", bin.c_str()
 			);
 
