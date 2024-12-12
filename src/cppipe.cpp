@@ -141,12 +141,18 @@ int parse_args_until_src(int argc, char* argv[])
 
 fs::path find_path_to_src(string_view src_file)
 {
-	if(fs::exists(src_file))	// found relative to CWD
+	if(fs::exists(src_file))	// Found relative to CWD
 	{
 		return src_file;
 	}
 
-	// search files on CPPIPEPATH
+	// Search in ~/cppipe
+	if(fs::path p = fs::path(getenv("HOME")) / "cppipe" / src_file; fs::exists(p))
+	{
+		return p;
+	}
+
+	// Search files on CPPIPEPATH
 	const char* cppipepath_var = getenv("CPPIPEPATH");
 	if(cppipepath_var)	// is set
 	{
