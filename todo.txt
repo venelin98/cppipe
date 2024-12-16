@@ -13,7 +13,6 @@ precompiled header cppipe.h
 -Wno-unused-result in install.sh
 file operations, lack of uniformity (C++ vs POSIX)
 Check all return codes and report errors
-shaded obj
 uninstall
 improve debug (the src file shown is the .ii)
 no optimizations option
