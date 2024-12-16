@@ -24,16 +24,17 @@ int main(int argc, char* argv[])
 
 	string out1 = $(ll + "src" | grep + "inl" | grep + "child");
 	if(out1.find("childProcess.inl") != string::npos)
-		cout << "OK 0/11" << endl;
+		cout << "OK 0/12" << endl;
 
 	string out2 = $(echo + "abc" + "def");
-	if(auto len = out2.size(); len != 8)
+	// "abc def" = 7 chars, trailing newlines are stripped by $()
+	if(auto len = out2.size(); len != 7)
 	{
 		cerr << "FAILURE: unexpected output length " << len << endl;
 		exit(1);
 	}
 
-	Cmd success("echo", "OK 1/11");
+	Cmd success("echo", "OK 1/12");
 	Cmd fail("mkdir", ".");
 	Cmd unexpected("echo", "FAILURE");
 	success &&
@@ -45,30 +46,34 @@ int main(int argc, char* argv[])
 	// unexpected &&
 	// unexpected;
 
-	Cmd write_file("echo", "Existing ", " ", "file. OK 2/11");
+	Cmd write_file("echo", "Existing ", " ", "file. OK 2/12");
 
 	write_file > "file.txt";
 	grep + "Existing" < "file.txt";
 
-	echo + "Appended to file OK 3/11" >> "file.txt";
+	echo + "Appended to file OK 3/12" >> "file.txt";
 	grep + "Appended" < "file.txt" &&
 	rm + "file.txt" &&
 	fail ||
-	Cmd("echo", "OK 4/11");
+	Cmd("echo", "OK 4/12");
 
-	echo + "OK 5/11" &&
-	echo + "OK 6/11",
-	Cmd("echo", "OK 7/11");
+	echo + "OK 5/12" &&
+	echo + "OK 6/12",
+	Cmd("echo", "OK 7/12");
 
-	echo + "OK 8/11" &
-	echo + "OK 9/11" &&
-	echo + "OK 10/11";
+	echo + "OK 8/12" &
+	echo + "OK 9/12" &&
+	echo + "OK 10/12";
 
 	// wait for all detached
 	while(wait(nullptr) != -1);
 
-	exec( echo + "OK 11/11" );
+	Cmd run_OK = echo;
+	run_OK.append_args({ "OK 11/12" });
+	run( run_OK );
+
+	exec( echo + "OK 12/12" );
 
 	// todo
-	// exec( echo + $(echo + "OK 11/11") );
+	// exec( echo + $(echo + "OK 11/12") );
 }

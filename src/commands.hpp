@@ -82,7 +82,7 @@ private:
 void exec(const Cmd&);    /* todo: take Pending? */
 
 /* Execute the command, like the operator() */
-DeadProc run(Cmd&);
+DeadProc run(const Cmd&);
 
 /* Run commands in sequence
    shell:
@@ -156,7 +156,7 @@ PendingCmd operator&(const PendingCmd&, const Cmd&);
 // 	operator const char*() { return c_str();}
 // };
 
-/* Execute a command and capture the output
+/* Execute a command and capture the output, remove trailing newlines like the shell version
    shell:
    var=$(ls)
    becomes:

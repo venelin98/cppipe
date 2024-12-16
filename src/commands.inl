@@ -141,8 +141,17 @@ inline std::string $(const PendingCmd& cmd)
 	while(read_count > 0);
 	// p finished?
 
+	// Remove trailing newlines
+	// i is on the past the end element, go back to end
+	int j = i - 1;
+
+	while(j > 0 && output[j] == '\n')
+		--j;
+
+	i = j + 1;
+
 	// erase the extra elements
-	output.erase(i, output.size() - i);
+	output.erase(i, -1); 	// till the end
 
 	close(p.out);
 
@@ -154,7 +163,7 @@ inline void exec(const Cmd& cmd)
 	exec_or_die(cmd.argv.data());
 }
 
-DeadProc run(const Cmd& cmd)
+inline DeadProc run(const Cmd& cmd)
 {
 	return cmd();
 }
