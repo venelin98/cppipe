@@ -1,4 +1,3 @@
--q only check timestamps
 man
 tips (sigaction SIGCHILD, SIG_IGN, SIG_DFL)
  - redirected processes block if their output is not read

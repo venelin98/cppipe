@@ -61,11 +61,15 @@ const char DEBUG_PREFIX[] = "__DBG";
 
 // Context
 fs::path HOME;
-bool debug = false;
 fs::path src_file;
 SrcType src_type;
 fs::path cache_dir;
 fs::path bin;   // cache bins to avoid recompiles
+
+// Options
+bool debug = false;
+// just compare timestamps of the source and bin, dont preprocess
+bool quick = false;
 
 }
 
@@ -119,7 +123,8 @@ int parse_args_until_src(int argc, char* argv[])
 				"Pass the ARGUMENTS to the compiled binary\n"
 				"The binaries are cached and recompiled only if the source or it's headers have changed\n\n"
 				"Options:\n"
-				"-g debug the binary, asserts are also enabled\n\n"
+				"-g debug the binary, asserts are also enabled\n"
+				"-q quicker, just compare source and binary time stamps, if included files were updated a recompile WON'T occur!\n\n"
 				"Environment variables:\n"
 				"CPPIPEPATH - ':'-separated list of directories to prepend to the FILE search path\n";
 			exit(0);
@@ -128,12 +133,15 @@ int parse_args_until_src(int argc, char* argv[])
 		{
 			debug = true;
 		}
+		else if( arg == "-q" )
+		{
+			quick = true;
+		}
 		else		// Then treat it as the src_arg
 		{
 			src_arg = i;
 			break;
 		}
-
 	}
 
 	if( !src_arg )
@@ -284,6 +292,16 @@ optional<fs::path> preprocess_and_compare()
 
 void compile_src_file()
 {
+	if(quick)
+	{
+		error_code ec;
+		if(fs::last_write_time(src_file) < fs::last_write_time(bin, ec))
+		{
+			// Binary is newer then source, dont recompile
+			return;
+		}
+	}
+
 	optional<fs::path> new_preprocessed = preprocess_and_compare();
 
 	// Only compile if the source is newer then the bin
@@ -316,7 +334,7 @@ void compile_src_file()
 
 void print_usage()
 {
-	cout << "Usage: cppipe [-g] FILE [ARGUMENTS]...\n";
+	cout << "Usage: cppipe [OPTION]... FILE [ARGUMENTS]...\n";
 }
 
 SrcType find_src_type(const string_view p)
