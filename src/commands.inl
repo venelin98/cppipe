@@ -43,11 +43,6 @@ inline DeadProc Cmd::operator()(fd_t in, fd_t out, fd_t err) const
 	return wait(p);
 }
 
-inline Proc Cmd::detach(fd_t in, fd_t out, fd_t err) const
-{
-	return createProcess(argv.data(), in, out, err);
-}
-
 inline void Cmd::append_args(std::initializer_list<const char*> args)
 {
 	argv.reserve(argv.size() + args.size());
@@ -100,31 +95,30 @@ inline DeadProc PendingCmd::operator()()
 	return cmd(in, out, err);
 }
 
-inline Proc PendingCmd::detach()
-{
-	assert(!execed_ && "Executed command twice");
-	execed_ = true;
-	return cmd.detach(in, out, err);
-}
-
-inline Proc PendingCmd::detachRedirOut()
-{
-	assert(!execed_ && "Executed command twice");
-	assert(out==1 && "Capturing redirected proccess");
-
-	execed_ = true;
-	return createCapProcess(cmd.argv.data(), in, err);
-}
-
 inline void PendingCmd::cancel()
 {
 	execed_ = true;
 }
 
-inline std::string $(const PendingCmd& cmd)
+inline std::string $(const PendingCmd& c)
 {
-	Proc p = const_cast<PendingCmd&>(cmd).detachRedirOut();
+	Proc p = detachRedirOut(c);
 
+	std::string output = read_to_end(p.out);
+
+	// Remove trailing newlines
+	int i = output.size() - 1;
+	while(i > 0 && output[i] == '\n')
+		--i;
+
+	// erase the newlines
+	output.erase(i+1, -1); 	// till the end
+
+	return output;
+}
+
+std::string read_to_end(fd_t fd)
+{
 	// write to the string directly, todo: find a better way
 	std::string output;
 
@@ -134,44 +128,53 @@ inline std::string $(const PendingCmd& cmd)
 	{
 		output.resize(output.size() + PIPE_BUF);   // todo: check if we are overallocating
 
-		read_count = read(p.out, &output[i], PIPE_BUF);  // todo: check errno
+		read_count = read(fd, &output[i], PIPE_BUF);  // todo: check errno
 		if(read_count > 0)
 			i += read_count;
 	}
 	while(read_count > 0);
-	// p finished?
 
-	// Remove trailing newlines
-	// i is on the past the end element, go back to end
-	int j = i - 1;
-
-	while(j > 0 && output[j] == '\n')
-		--j;
-
-	i = j + 1;
+	close(fd);
 
 	// erase the extra elements
 	output.erase(i, -1); 	// till the end
 
-	close(p.out);
-
 	return output;
 }
 
-inline void exec(const Cmd& cmd)
+inline void exec(const Cmd& c)
 {
-	exec_or_die(cmd.argv.data());
+	exec_or_die(c.argv.data());
 }
 
-inline DeadProc run(const Cmd& cmd)
+inline DeadProc run(const PendingCmd& c)
 {
-	return cmd();
+	return const_cast<PendingCmd&>(c)();
 }
 
-inline PendingCmd operator,(const PendingCmd& cleft, const Cmd& right)
+inline Proc detach(const PendingCmd& ccmd)
 {
-	auto& left = const_cast<PendingCmd&>(cleft);
-	left();
+	auto& c = const_cast<PendingCmd&>(ccmd);
+
+	assert(!c.execed_ && "Executed command twice");
+	c.execed_ = true;
+	return createProcess(c.cmd.argv.data(), c.in, c.out, c.err);
+}
+
+Proc detachRedirOut(const PendingCmd& ccmd)
+{
+	auto& c = const_cast<PendingCmd&>(ccmd);
+
+	assert(!c.execed_ && "Executed command twice");
+	assert(c.out==1 && "Capturing redirected proccess");
+
+	c.execed_ = true;
+	return createCapProcess(c.cmd.argv.data(), c.in, c.err);
+}
+
+inline PendingCmd operator,(const PendingCmd& left, const Cmd& right)
+{
+	run(left);
 	return PendingCmd(right);
 }
 
@@ -180,10 +183,9 @@ inline PendingCmd operator,(DeadProc, const Cmd& right)
 	return PendingCmd(right);
 }
 
-inline PendingCmd operator|(const PendingCmd& cleft, const Cmd& right)
+inline PendingCmd operator|(const PendingCmd& left, const Cmd& right)
 {
-	auto& left = const_cast<PendingCmd&>(cleft);
-	fd_t leftOut = left.detachRedirOut().out;
+	fd_t leftOut = detachRedirOut(left).out;
 	return PendingCmd(right, leftOut);
 }
 
@@ -230,77 +232,77 @@ inline DeadProc operator||(DeadProc p, const Cmd& ccmd)
 	return p;
 }
 
-inline PendingCmd& operator>(const PendingCmd& cmd, const char* file)
+inline PendingCmd& operator>(const PendingCmd& c, const char* file)
 {
 	fd_t fd = _cppipe::open_or_die(file, O_WRONLY | O_CREAT);
-	return cmd > fd;
+	return c > fd;
 }
 inline PendingCmd& operator>(const PendingCmd& ccmd, fd_t fd)
 {
-	auto& cmd = const_cast<PendingCmd&>(ccmd);
-	assert(cmd.out == 1 && "ERROR: Output is already redirected!");
+	auto& c = const_cast<PendingCmd&>(ccmd);
+	assert(c.out == 1 && "ERROR: Output is already redirected!");
 
-	cmd.out = fd;
-	return cmd;
+	c.out = fd;
+	return c;
 }
 
-inline PendingCmd& operator>>(const PendingCmd& cmd, const char* file)
+inline PendingCmd& operator>>(const PendingCmd& c, const char* file)
 {
 	fd_t fd = _cppipe::open_or_die(file, O_WRONLY | O_CREAT | O_APPEND);
-	return cmd > fd;
+	return c > fd;
 }
-inline PendingCmd& operator>>(const PendingCmd& cmd, fd_t fd)
+inline PendingCmd& operator>>(const PendingCmd& c, fd_t fd)
 {
-	return cmd > fd;
+	return c > fd;
 }
 
-inline PendingCmd& operator>=(const PendingCmd& cmd, const char* file)
+inline PendingCmd& operator>=(const PendingCmd& c, const char* file)
 {
 	fd_t fd = _cppipe::open_or_die(file, O_WRONLY | O_CREAT);
-	return cmd >= fd;
+	return c >= fd;
 }
 inline PendingCmd& operator>=(const PendingCmd& ccmd, fd_t fd)
 {
-	auto& cmd = const_cast<PendingCmd&>(ccmd);
-	assert(cmd.err == 2 && "ERROR: Error output is already redirected!");
+	auto& c = const_cast<PendingCmd&>(ccmd);
+	assert(c.err == 2 && "ERROR: Error output is already redirected!");
 
-	cmd.err = fd;
-	return cmd;
+	c.err = fd;
+	return c;
 }
 
-inline PendingCmd& operator>>=(const PendingCmd& cmd, const char* file)
+inline PendingCmd& operator>>=(const PendingCmd& c, const char* file)
 {
 	fd_t fd = _cppipe::open_or_die(file, O_WRONLY | O_CREAT | O_APPEND);
-	return cmd >= fd;
+	return c >= fd;
 }
-inline PendingCmd& operator>>=(const PendingCmd& cmd, fd_t fd)
+inline PendingCmd& operator>>=(const PendingCmd& c, fd_t fd)
 {
-	return cmd >= fd;
+	return c >= fd;
 }
 
-inline PendingCmd& operator<(const PendingCmd& cmd, const char* file)
+inline PendingCmd& operator<(const PendingCmd& c, const char* file)
 {
 	fd_t fd = _cppipe::open_or_die(file, O_RDONLY);
-	return cmd < fd;
+	return c < fd;
 }
 inline PendingCmd& operator<(const PendingCmd& ccmd, fd_t fd)
 {
-	auto& cmd = const_cast<PendingCmd&>(ccmd);
-	assert(cmd.in == 0 && "ERROR: Input is already redirected!");
+	auto& c = const_cast<PendingCmd&>(ccmd);
+	assert(c.in == 0 && "ERROR: Input is already redirected!");
 
-	cmd.in = fd;
-	return cmd;
+	c.in = fd;
+	return c;
 }
 
-inline PendingCmd operator&(const PendingCmd& cleft, const Cmd& right)
+inline PendingCmd operator&(const PendingCmd& left, const Cmd& right)
 {
-	const_cast<PendingCmd&>(cleft).detach();
+	detach(left);
 	return PendingCmd(right);
 }
 
-inline std::ostream& operator<<(std::ostream& s, const Cmd& cmd)
+inline std::ostream& operator<<(std::ostream& s, const Cmd& c)
 {
-	for(size_t i = 0; i < cmd.argv.size() - 1; ++i)
-		s << '"' << cmd.argv[i] << '"' << ' ';
+	for(size_t i = 0; i < c.argv.size() - 1; ++i)
+		s << '"' << c.argv[i] << '"' << ' ';
 	return s;
 }

@@ -7,9 +7,10 @@
 /* All CONST references are used and cast away to allow for taking
    both l and r values without using templates or making copies
 
-   implicitly convert to it but not to const char* and we want the
-   implicit conversion for quick scripting
-   arg pointers are kept and used not copied */
+   char* arg pointers are kept and used NOT COPIED
+
+   Anything that takes a PendingCmd takes a Cmd as well
+*/
 
 /* A shell command */
 class Cmd
@@ -27,9 +28,6 @@ public:
 	   else use the given file desciptors. this can also be used
 	   to redirect err to out by giving err=1 like in shell */
 	DeadProc operator()(fd_t in=0, fd_t out=1, fd_t err=2) const;
-
-	/* Run the command, don't wait to return like shell's & */
-	Proc detach(fd_t in=0, fd_t out=1, fd_t err=2) const;
 
 	/* Append arguments */
 	void append_args(std::initializer_list<const char*>);
@@ -52,37 +50,40 @@ public:
 	/* Execute the command on destruction */
 	~PendingCmd();
 
-	/* No copy we use unnamed return value optimization to return PendingCmd without destruction */
+	/* No copy - we use unnamed return value optimization to return PendingCmd without destruction */
 	PendingCmd(const PendingCmd&) = delete;
 	PendingCmd& operator=(const PendingCmd&) = delete;
 
 	/* Run the command */
 	DeadProc operator()();
 
-	/* Run the command async
-	   shell:   cmd &
-	   becomes: cmd.detach() */
-	Proc detach();
-	/* Detach but redirect output to a pipe */
-	Proc detachRedirOut();
-
 	/* Prevent a pending command from being executed on destruction */
 	void cancel();
 
-	Cmd cmd;
+	const Cmd& cmd;
 	fd_t in, out, err;
 private:
 	bool execed_;
+
+	friend Proc detach(const PendingCmd&);
+	friend Proc detachRedirOut(const PendingCmd&);
 };
 
-
-/* Anything that takes PendingCmd can take Cmd aswell */
 
 /* Like shell's exec */
 void exec(const Cmd&);    /* todo: take Pending? */
 
 /* Execute the command, like the operator() */
-DeadProc run(const Cmd&);
+DeadProc run(const PendingCmd&);
+
+/* Run the command async
+   shell:   cmd &
+   becomes: cmd.detach() */
+Proc detach(const PendingCmd&);
+
+/* Detach but redirect output to a pipe */
+Proc detachRedirOut(const PendingCmd&);
+
 
 /* Run commands in sequence
    shell:
@@ -163,6 +164,10 @@ PendingCmd operator&(const PendingCmd&, const Cmd&);
    auto var = $(ls);
 */
 std::string $(const PendingCmd&);
+
+/* Read from a file descriptor until it closes
+   can be used on proccess out/err */
+std::string read_to_end(fd_t);
 
 /* Operator<< for printing */
 std::ostream& operator<<(std::ostream&, const Cmd&);

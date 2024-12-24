@@ -1,5 +1,7 @@
+-q only check timestamps
 man
 tips (sigaction SIGCHILD, SIG_IGN, SIG_DFL)
+ - redirected processes block if their output is not read
 make sure file descriptors are closed when no longer used
 cppipe compile options from tft
 respect CXXFLAGS LDFLAGS

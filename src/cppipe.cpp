@@ -243,7 +243,11 @@ optional<fs::path> preprocess_and_compare()
 		+= (src_type == SrcType::C ? ".i" : ".ii");
 
 	// Result of preprocessing as string
-	string new_pp = $(preprocess);
+	Proc preprocessing = detachRedirOut(preprocess);
+	string new_pp = read_to_end(preprocessing.out);
+
+	if( !wait(preprocessing) )	// preprocessing failed
+		exit(1);
 
 	if( fs::exists(old_pp_path) ) // todo: clean up if else blocks
 	{
