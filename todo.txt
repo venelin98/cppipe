@@ -1,3 +1,4 @@
+description - advantages over manual compile
 man
 tips (sigaction SIGCHILD, SIG_IGN, SIG_DFL)
  - redirected processes block if their output is not read
@@ -6,7 +7,8 @@ cppipe compile options from tft
 respect CXXFLAGS LDFLAGS
 
 ?
-string args
+optional exec
+std::string args
 args before src file go to compiler
 use exceptions (open_or_die)
 throw when a command couldnt be ran
