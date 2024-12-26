@@ -1,3 +1,4 @@
+example #!/usr/bin/cppipe
 description - advantages over manual compile
 man
 tips (sigaction SIGCHILD, SIG_IGN, SIG_DFL)
@@ -5,6 +6,7 @@ tips (sigaction SIGCHILD, SIG_IGN, SIG_DFL)
 make sure file descriptors are closed when no longer used
 cppipe compile options from tft
 respect CXXFLAGS LDFLAGS
+< PendingCmd store files we need to close
 
 ?
 optional exec
@@ -20,3 +22,4 @@ uninstall
 improve debug (the src file shown is the .ii)
 no optimizations option
 split
+PendingCmd template

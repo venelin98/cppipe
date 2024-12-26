@@ -1,3 +1,4 @@
+#!/usr/local/bin/cppipe
 // Test cppipe functions
 
 #include <cppipe/commands.hpp>

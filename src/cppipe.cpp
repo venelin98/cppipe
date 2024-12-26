@@ -43,12 +43,12 @@ fs::path find_path_to_src(string_view src_file);
 // find the path of the cache for the given src_file path
 fs::path get_cache_dir_path(const fs::path& src_file);
 
-// map file in memory with write persmissions
+// map file in memory with write permissions
 MappedFile mapfile_for_writing(const fs::path& file);
 
 // preprocess the src file, compare and overwrite the result to the previous version
-// return the path of the preprocessed file if it's different
-optional<fs::path> preprocess_and_compare();
+// return whether there was a difference
+bool preprocess_and_compare();
 
 // only recompile if changes are present
 void compile_src_file();
@@ -64,11 +64,12 @@ fs::path HOME;
 fs::path src_file;
 SrcType src_type;
 fs::path cache_dir;
+fs::path preprocessed_file;
 fs::path bin;   // cache bins to avoid recompiles
 
 // Options
 bool debug = false;
-// just compare timestamps of the source and bin, dont preprocess
+// just compare timestamps of the source and bin, don't preprocess
 bool quick = false;
 
 }
@@ -82,6 +83,10 @@ int main(int argc, char* argv[])
 	src_file = find_path_to_src( argv[src_arg] );
 	src_type = find_src_type( argv[src_arg] );
 	cache_dir = get_cache_dir_path(src_file);
+
+	preprocessed_file = cache_dir / (debug ? DEBUG_PREFIX : "") += src_file.stem()
+		+= (src_type == SrcType::C ? ".i" : ".ii");
+
 	bin = cache_dir / (debug ? DEBUG_PREFIX : "") += src_file.filename();
 
 	// Compile the src
@@ -178,7 +183,7 @@ fs::path find_path_to_src(string_view src_file)
 		}
 	}
 
-	// Couln't find the src
+	// Couldn't find the src
 	cerr << "File: " << src_file << " doesn't exist\n";
 	exit(1);
 }
@@ -212,7 +217,7 @@ MappedFile mapfile_for_writing(const fs::path& file)
 	return res;
 }
 
-optional<fs::path> preprocess_and_compare()
+bool preprocess_and_compare()
 {
 	Cmd preprocess(
 		src_type == SrcType::C ? CC : CXX,
@@ -233,16 +238,33 @@ optional<fs::path> preprocess_and_compare()
 		preprocess += "-xc++"; // treat the file as a .cpp
 	}
 
-	// Read source from stdin
-	preprocess += "-";
-
-
 	if(!debug)
 		preprocess +=  "-DNDEBUG";
 
-	// Preprocessed file from the previous run
-	fs::path old_pp_path = cache_dir / (debug ? DEBUG_PREFIX : "") += src_file.stem()
-		+= (src_type == SrcType::C ? ".i" : ".ii");
+	// Read source from stdin
+	preprocess += "-";
+
+	// THIS IS THE RIGHT WAY BUT CURRENTLY PRODUCES A GCC WARNING
+	// File to preprocess
+	// fd_t src = open(src_file.c_str(), O_RDONLY);
+
+	// If it begins with #! skip the first line
+	// char buf[128];
+	// int read_count = read(src, &buf, 128);
+	// if(read_count > 1 && buf[0] == '#' && buf[1] == '!')
+	// {
+	// 	int newline = 0;
+	// 	while(buf[newline] != '\n') // out of bounds
+	// 		++newline;
+
+	// 	lseek(src, newline, SEEK_SET);
+	// }
+	// else
+	// 	lseek(src, 0, SEEK_SET);
+
+	// Start preprocessing, give the source FD to gcc
+	// Proc preprocessing = detachRedirOut(preprocess < src);
+	// close(preprocessing.in);
 
 	Proc preprocessing = detachRedirInOut(preprocess);
 
@@ -264,36 +286,36 @@ optional<fs::path> preprocess_and_compare()
 	if( !wait(preprocessing) )	// preprocessing failed
 		exit(1);
 
-	if( fs::exists(old_pp_path) ) // todo: clean up if else blocks
+	if( fs::exists(preprocessed_file) ) // todo: clean up if else blocks
 	{
-		if( fs::file_size(old_pp_path) == new_pp.size() )
+		if( fs::file_size(preprocessed_file) == new_pp.size() )
 		{
-			MappedFile old_pp = mapfile_for_writing(old_pp_path);
-			if( !memcmp(old_pp.data, &new_pp[0], old_pp.len) ) // unchanged
+			MappedFile old_pp = mapfile_for_writing(preprocessed_file);
+			if( !memcmp(old_pp.data, new_pp.data(), old_pp.len) ) // unchanged
 			{
-				return nullopt;
+				return false;
 			}
 			else
 			{
 				memcpy(old_pp.data, &new_pp[0], old_pp.len);
 				munmap(old_pp.data, old_pp.len);
-				return old_pp_path;
+				return true;
 			}
 			// todo
 			// munmap(data, len);
 		}
 		else
 		{
-			ofstream pp_file(old_pp_path);
+			ofstream pp_file(preprocessed_file);
 			pp_file << new_pp;
-			return old_pp_path;
+			return true;
 		}
 	}
 	else
 	{
-		ofstream pp_file(old_pp_path);
+		ofstream pp_file(preprocessed_file);
 		pp_file << new_pp;
-		return old_pp_path;
+		return true;
 	}
 }
 
@@ -304,20 +326,19 @@ void compile_src_file()
 		error_code ec;
 		if(fs::last_write_time(src_file) < fs::last_write_time(bin, ec))
 		{
-			// Binary is newer then source, dont recompile
+			// Binary is newer then source, don't recompile
 			return;
 		}
 	}
 
-	optional<fs::path> new_preprocessed = preprocess_and_compare();
+	bool file_changed = preprocess_and_compare();
 
 	// Only compile if the source is newer then the bin
-	if(new_preprocessed || !fs::exists(bin))
+	if(file_changed || !fs::exists(bin))
 	{
-
 		Cmd compile(
 			src_type == SrcType::C ? CC : CXX,
-			new_preprocessed->c_str(),
+			preprocessed_file.c_str(),
 			"-o", bin.c_str()
 			);
 
@@ -335,7 +356,10 @@ void compile_src_file()
 
 
 		if( !compile() )	 // if failed to compile
+		{
+			fs::remove(bin);
 			exit(1);
+		}
 	}
 }
 

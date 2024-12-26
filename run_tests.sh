@@ -2,7 +2,7 @@
 set -e
 
 # Test cppipe functions
-OKs=$(cppipe test/functions_test.cppipe 2>/dev/null | grep OK | wc -l)
+OKs=$(test/functions_test.cppipe 2>/dev/null | grep OK | wc -l)
 if ! [ $OKs = 13 ]
 then
     echo "Functions test failed: EXPECTED 13 OKs, got $OKs"

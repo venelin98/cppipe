@@ -146,6 +146,16 @@ inline Proc detach(const PendingCmd& ccmd)
 	return createProcess(c.cmd.argv.data(), c.in, c.out, c.err);
 }
 
+inline Proc detachRedirIn(const PendingCmd& ccmd)
+{
+	auto& c = const_cast<PendingCmd&>(ccmd);
+	assert(c.in==0 && "Capturing redirected output");
+
+	c.in = PIPE;
+
+	return detach(c);
+}
+
 inline Proc detachRedirOut(const PendingCmd& ccmd)
 {
 	auto& c = const_cast<PendingCmd&>(ccmd);
