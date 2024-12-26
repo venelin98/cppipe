@@ -53,141 +53,91 @@ inline std::optional<DeadProc> check_exited(Proc p)
 
 namespace _cppipe
 {
-	/* Create a proccess */
-	inline Proc create(const char* const argv[], fd_t in, fd_t out, fd_t err)
+	inline void redirect(fd_t new_fd, fd_t old_fd)
 	{
-		Proc proc;
-		proc.in = in;
-		proc.out = out;
-		proc.err = err;
-
-		proc.pid = fork();
-		if(proc.pid == 0)	/* child */
-		{
-			if(in != STDIN_FILENO)
-				dup2(in, STDIN_FILENO);
-
-			if(out != STDOUT_FILENO)
-				dup2(out, STDOUT_FILENO);
-
-			if(err != STDERR_FILENO)
-				dup2(err, STDERR_FILENO);
-
-			exec_or_die(argv);
-		}
-
-		return proc;
-	}
-
-	/* Create a process taking input from pipe childIn */
-	inline Proc createInRedirected(const char* const argv[], const fd_t childIn[2])
-	{
-		Proc childproc;
-		childproc.in = childIn[1];
-		childproc.out = STDOUT_FILENO;
-		childproc.err = STDERR_FILENO;
-
-		childproc.pid = fork();
-		if(childproc.pid == 0)	/* child */
-		{
-			close(childIn[1]);
-			dup2(childIn[0], STDIN_FILENO);
-
-			exec_or_die(argv);
-		}
-
-		return childproc;
-	}
-
-	/* Like createInRedirected but redirect output to a new pipe */
-	inline Proc createInOutRedirected(const char* const argv[], const fd_t childIn[2])
-	{
-		fd_t childOut[2];			/* todo: add error #include "processTypes.hpp"*/
-		pipe(childOut);
-
-		Proc childproc;
-		childproc.in = childIn[1];
-		childproc.out = childOut[0];
-		childproc.err = STDERR_FILENO;
-
-		childproc.pid = fork();
-		if(childproc.pid != 0)				/* parent */
-		{
-			close(childOut[1]);
-		}
-		else
-		{
-			close(childIn[1]);
-			dup2(childIn[0], STDIN_FILENO);
-
-			dup2(childOut[1], STDOUT_FILENO);
-
-			exec_or_die(argv);
-		}
-
-		return childproc;
-	}
-
-	inline Proc createCapProcess(const char* const argv[], fd_t in, fd_t err)
-	{
-		fd_t childOut[2];
-		pipe(childOut);
-
-		Proc proc;
-		proc.in = in;
-		proc.out = childOut[0];
-		proc.err = err;
-
-		proc.pid = fork();
-		if(proc.pid == 0)	/* child */
-		{
-			if(in != STDIN_FILENO)
-				dup2(in, STDIN_FILENO);
-
-			dup2(childOut[1], STDOUT_FILENO);
-
-			if(err != STDERR_FILENO)
-				dup2(err, STDERR_FILENO);
-
-			exec_or_die(argv);
-		}
-		else			/* parent */
-		{
-			close(childOut[1]); /* close write side */
-		}
-
-		return proc;
+		if(new_fd != old_fd)
+			dup2(new_fd, old_fd);
 	}
 }
 
 inline Proc createProcess(const char* const argv[], fd_t in, fd_t out, fd_t err)
 {
-	Proc proc;
+	using _cppipe::redirect;
 
-	if(in == PIPE)
+	bool in_redir = in == PIPE;
+	bool out_redir = out == PIPE;
+	bool err_redir = err == PIPE;
+
+	Proc p;
+
+	fd_t childIn[2], childOut[2], childErr[2];
+	if(in_redir)
 	{
-		fd_t childIn[2];
 		pipe(childIn);
-
-		if(out == PIPE)
-			proc = _cppipe::createInOutRedirected(argv, childIn);
-		else
-			proc = _cppipe::createInRedirected(argv, childIn);
-
-		close(childIn[0]); // parent closes read side
+		p.in  = childIn[1];
 	}
-	else if(out == PIPE)
-		proc = _cppipe::createCapProcess(argv, in, err);
-	else			/* todo: err == PIPE */
-		proc = _cppipe::create(argv, in, out, err);
+	else
+		p.in = in;
 
-	return proc;
+	if(out_redir)
+	{
+		pipe(childOut);
+		p.out = childOut[0];
+	}
+	else
+		p.out = out;
+
+	if(err_redir)
+	{
+		pipe(childErr);
+		p.err = childErr[0];
+	}
+	else
+		p.err = err;
+
+	p.pid = fork();
+	if(p.pid == 0)	/* child */
+	{
+		/* Close write side */
+		if(in_redir)
+			close(childIn[1]);
+
+		/* Close read side */
+		if(out_redir)
+			close(childOut[0]);
+		if(err_redir)
+			close(childErr[0]);
+
+		/* Take pipe as standart in, out, err */
+		redirect(in_redir ? childIn[0] : in, STDIN_FILENO);
+		redirect(out_redir ? childOut[1] : out, STDOUT_FILENO);
+		redirect(err_redir ? childErr[1] : err, STDERR_FILENO);
+
+		exec_or_die(argv);
+	}
+	else			/* parent */
+	{
+		/* Close read side */
+		if(in_redir)
+			close(childIn[0]);
+
+		/* Close write side */
+		if(out_redir)
+			close(childOut[1]);
+		if(err_redir)
+			close(childErr[1]);
+	}
+
+	return p;
 }
 
 inline void exec_or_die(const char* const argv[])
 {
 	execvp(argv[0], (char* const *)argv);
 
-	std::cerr << "Can't execute: " << argv[0] << ' ' << strerror(errno) << std::endl;
+	std::cerr << "Can't execute command: " << argv[0] << ' ' << strerror(errno) << '\n';
+
+	/* for(const char* const * arg = argv; *arg != nullptr; ++arg) */
+		/* std::cerr << *arg << '\n'; */
 	_exit(1);		// _exit since we are a child
 }

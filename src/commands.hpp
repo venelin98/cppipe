@@ -66,6 +66,7 @@ private:
 	bool execed_;
 
 	friend Proc detach(const PendingCmd&);
+	friend Proc detachRedirIn(const PendingCmd&);
 	friend Proc detachRedirOut(const PendingCmd&);
 	friend Proc detachRedirInOut(const PendingCmd&);
 };
@@ -82,6 +83,9 @@ DeadProc run(const PendingCmd&);
    becomes: cmd.detach() */
 Proc detach(const PendingCmd&);
 
+/* Detach but redirect input to a new pipe
+ * Which can then be read to using write(Proc.in, ...) */
+Proc detachRedirIn(const PendingCmd&);
 /* Detach but redirect output to a new pipe */
 Proc detachRedirOut(const PendingCmd&);
 /* Also rediredct input */
