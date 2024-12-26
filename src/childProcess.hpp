@@ -15,7 +15,7 @@ struct Proc
 struct DeadProc: public Proc
 {
 	DeadProc(Proc, int status);	/* status as returned by waitpid */
-	bool normal_exit;
+	bool normal_exit;		/* todo: std::optional? */
 	U8 exit_status;				/* only use if normal_exit */
 
 	/* A returned process evaluates to true if it exited normaly and
@@ -29,28 +29,17 @@ DeadProc wait(Proc);
 /* Check if the Proc has exited and return it's DeadProc if it has */
 std::optional<DeadProc> check_exited(Proc);
 
-enum Redirect: U32
-{
-	NOTHING =0,
-	INPUT  = 1 << 0,
-	OUTPUT = 1 << 1,
-	ERR    = 1 << 2				/* todo */
-};
+enum { PIPE = -1 };
 
-
-/* For all funcions argv is an array of command parameters
+/* Create a proccess
+ * argv is an array of command parameters
  * argv[0] is the command itself, argv needs to end with nullptr
- * non of the functions wait for the proccess to finish */
-
-/* Create a proccess and redirect anyting flaged to a new pipe
-   flags - INPUT, OUTPUT, ERR
-   return pipe file descriptors*/
-Proc createRedirProcess(const char* const argv[], U32 flags);
-
-/* Capture ouput to a pipe, can take alternative input and err FDs */
-Proc createCapProcess(const char* const argv[], fd_t in=0, fd_t err=2);
-
-/* Can take FDs as arguments which will be used instead of std */
+ * we don't wait for the proccess to finish
+ *
+ * Can take FDs as arguments which will be used instead of std
+ * If PIPE is given for any FD, a pipe is created and input/output/error is redirected there
+ * The pipe can then be read (out, err) or written to (in)
+ */
 Proc createProcess(const char* const argv[], fd_t in=0, fd_t out=1, fd_t err=2);
 
 /* execvp the command or exit */

@@ -178,12 +178,6 @@ fs::path find_path_to_src(string_view src_file)
 		}
 	}
 
-	// Search in ~/cppipe
-	if(fs::path p = HOME / "cppipe" / src_file; fs::exists(p)) // todo: what if ~/cppipe/../... matches
-	{
-		return p;
-	}
-
 	// Couln't find the src
 	cerr << "File: " << src_file << " doesn't exist\n";
 	exit(1);
@@ -236,11 +230,11 @@ optional<fs::path> preprocess_and_compare()
 	else
 	{
 		preprocess.append_args({ CXXFLAGS });
-		preprocess += "-xc++"; // treat the file as a cpp
+		preprocess += "-xc++"; // treat the file as a .cpp
 	}
 
-	// File to be preprocessed
-	preprocess += src_file.c_str();
+	// Read source from stdin
+	preprocess += "-";
 
 
 	if(!debug)
@@ -250,8 +244,21 @@ optional<fs::path> preprocess_and_compare()
 	fs::path old_pp_path = cache_dir / (debug ? DEBUG_PREFIX : "") += src_file.stem()
 		+= (src_type == SrcType::C ? ".i" : ".ii");
 
+	Proc preprocessing = detachRedirInOut(preprocess);
+
+	// File to preprocess
+	MappedFile src = mapfile_for_writing(src_file);
+
+	// If it begins with #! skip the first line
+	const char* p = src.data;
+	if(src.len > 1 && p[0] == '#' && p[1] == '!')
+		while(*p != '\n')
+			++p;
+
+	write(preprocessing.in, p, src.len - (p - src.data));
+	close(preprocessing.in);
+
 	// Result of preprocessing as string
-	Proc preprocessing = detachRedirOut(preprocess);
 	string new_pp = read_to_end(preprocessing.out);
 
 	if( !wait(preprocessing) )	// preprocessing failed
