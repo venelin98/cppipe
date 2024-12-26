@@ -53,12 +53,39 @@ inline std::optional<DeadProc> check_exited(Proc p)
 
 namespace _cppipe
 {
-	/* create a process taking input from pipe childIn */
-	inline Proc createProc(const char* const argv[], const fd_t childIn[2])
+	/* Create a proccess */
+	inline Proc create(const char* const argv[], fd_t in, fd_t out, fd_t err)
+	{
+		Proc proc;
+		proc.in = in;
+		proc.out = out;
+		proc.err = err;
+
+		proc.pid = fork();
+		if(proc.pid == 0)	/* child */
+		{
+			if(in != STDIN_FILENO)
+				dup2(in, STDIN_FILENO);
+
+			if(out != STDOUT_FILENO)
+				dup2(out, STDOUT_FILENO);
+
+			if(err != STDERR_FILENO)
+				dup2(err, STDERR_FILENO);
+
+			exec_or_die(argv);
+		}
+
+		return proc;
+	}
+
+	/* Create a process taking input from pipe childIn */
+	inline Proc createInRedirected(const char* const argv[], const fd_t childIn[2])
 	{
 		Proc childproc;
 		childproc.in = childIn[1];
 		childproc.out = STDOUT_FILENO;
+		childproc.err = STDERR_FILENO;
 
 		childproc.pid = fork();
 		if(childproc.pid == 0)	/* child */
@@ -72,34 +99,8 @@ namespace _cppipe
 		return childproc;
 	}
 
-	/* create a process and redirect it's output to a pipe */
-	inline Proc createRedirProc(const char* const argv[])
-	{
-		fd_t childOut[2];
-		pipe(childOut);
-
-		Proc childproc;
-		childproc.in = STDIN_FILENO;
-		childproc.out = childOut[0];
-
-		childproc.pid = fork();
-		/* close(STDIN_FILENO); flush?*/
-		if(childproc.pid != 0)				/* parent */
-		{
-			close(childOut[1]);
-		}
-		else
-		{
-			dup2(childOut[1], STDOUT_FILENO);
-
-			exec_or_die(argv);
-		}
-
-		return childproc;
-	}
-
-	/* create a process redirecting both in and out */
-	inline Proc createRedirProc(const char* const argv[], const fd_t childIn[2])
+	/* Like createInRedirected but redirect output to a new pipe */
+	inline Proc createInOutRedirected(const char* const argv[], const fd_t childIn[2])
 	{
 		fd_t childOut[2];			/* todo: add error #include "processTypes.hpp"*/
 		pipe(childOut);
@@ -107,9 +108,9 @@ namespace _cppipe
 		Proc childproc;
 		childproc.in = childIn[1];
 		childproc.out = childOut[0];
+		childproc.err = STDERR_FILENO;
 
 		childproc.pid = fork();
-		/* close(STDIN_FILENO); flush?*/
 		if(childproc.pid != 0)				/* parent */
 		{
 			close(childOut[1]);
@@ -126,81 +127,59 @@ namespace _cppipe
 
 		return childproc;
 	}
-}
 
-inline Proc createRedirProcess(const char* const argv[], U32 flags) /* todo rename */
-{
-	fd_t childIn[2];
-	Proc proc;
-
-	if(flags & INPUT)
+	inline Proc createCapProcess(const char* const argv[], fd_t in, fd_t err)
 	{
-		pipe(childIn);
-		if(flags & OUTPUT)
-			proc = _cppipe::createRedirProc(argv, childIn);
-		else
-			proc = _cppipe::createProc(argv, childIn);
+		fd_t childOut[2];
+		pipe(childOut);
+
+		Proc proc;
+		proc.in = in;
+		proc.out = childOut[0];
+		proc.err = err;
+
+		proc.pid = fork();
+		if(proc.pid == 0)	/* child */
+		{
+			if(in != STDIN_FILENO)
+				dup2(in, STDIN_FILENO);
+
+			dup2(childOut[1], STDOUT_FILENO);
+
+			if(err != STDERR_FILENO)
+				dup2(err, STDERR_FILENO);
+
+			exec_or_die(argv);
+		}
+		else			/* parent */
+		{
+			close(childOut[1]); /* close write side */
+		}
+
+		return proc;
 	}
-	else if(flags & OUTPUT)
-		proc = _cppipe::createRedirProc(argv);
-	else
-		proc = createProcess(argv);
-
-	return proc;
-}
-
-inline Proc createCapProcess(const char* const argv[], fd_t in, fd_t err)
-{
-	fd_t childOut[2];
-	pipe(childOut);
-
-	Proc proc;
-	proc.in = in;
-	proc.out = childOut[0];
-	proc.err = err;
-
-	proc.pid = fork();
-	if(proc.pid == 0)	/* child */
-	{
-		if(in != STDIN_FILENO)
-			dup2(in, STDIN_FILENO);
-
-		dup2(childOut[1], STDOUT_FILENO);
-
-		if(err != STDERR_FILENO)
-			dup2(err, STDERR_FILENO);
-
-		exec_or_die(argv);
-	}
-	else
-	{
-		close(childOut[1]);
-	}
-
-	return proc;
 }
 
 inline Proc createProcess(const char* const argv[], fd_t in, fd_t out, fd_t err)
 {
 	Proc proc;
-	proc.in = in;
-	proc.out = out;
-	proc.err = err;
 
-	proc.pid = fork();
-	if(proc.pid == 0)	/* child */
+	if(in == PIPE)
 	{
-		if(in != STDIN_FILENO)
-			dup2(in, STDIN_FILENO);
+		fd_t childIn[2];
+		pipe(childIn);
 
-		if(out != STDOUT_FILENO)
-			dup2(out, STDOUT_FILENO);
+		if(out == PIPE)
+			proc = _cppipe::createInOutRedirected(argv, childIn);
+		else
+			proc = _cppipe::createInRedirected(argv, childIn);
 
-		if(err != STDERR_FILENO)
-			dup2(err, STDERR_FILENO);
-
-		exec_or_die(argv);
+		close(childIn[0]); // parent closes read side
 	}
+	else if(out == PIPE)
+		proc = _cppipe::createCapProcess(argv, in, err);
+	else			/* todo: err == PIPE */
+		proc = _cppipe::create(argv, in, out, err);
 
 	return proc;
 }

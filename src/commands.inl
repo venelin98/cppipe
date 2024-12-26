@@ -31,15 +31,6 @@ namespace _cppipe
 inline DeadProc Cmd::operator()(fd_t in, fd_t out, fd_t err) const
 {
 	Proc p = createProcess(argv.data(), in, out, err);
-
-	// Close files if such were used
-	// if(in > 2)
-	// 	close(in);
-	// if(out > 2)
-	// 	close(out);
-	// if(err > 2)
-	// 	close(err);
-
 	return wait(p);
 }
 
@@ -79,13 +70,7 @@ inline PendingCmd::PendingCmd(const Cmd& origin, fd_t in, fd_t out, fd_t err)
 inline PendingCmd::~PendingCmd()
 {
 	if(!execed_)
-		operator()();
-	/* if(in != 0) */
-	/* 	close(in); */
-	/* if(out != 1) */
-	/* 	close(out); */
-	/* if(err != 2) */
-	/* 	close(err); */
+		cmd(in, out, err);
 }
 
 inline DeadProc PendingCmd::operator()()
@@ -155,21 +140,30 @@ inline DeadProc run(const PendingCmd& c)
 inline Proc detach(const PendingCmd& ccmd)
 {
 	auto& c = const_cast<PendingCmd&>(ccmd);
-
 	assert(!c.execed_ && "Executed command twice");
+
 	c.execed_ = true;
 	return createProcess(c.cmd.argv.data(), c.in, c.out, c.err);
 }
 
-Proc detachRedirOut(const PendingCmd& ccmd)
+inline Proc detachRedirOut(const PendingCmd& ccmd)
 {
 	auto& c = const_cast<PendingCmd&>(ccmd);
+	assert(c.out==1 && "Capturing redirected output");
 
-	assert(!c.execed_ && "Executed command twice");
-	assert(c.out==1 && "Capturing redirected proccess");
+	c.out = PIPE;
 
-	c.execed_ = true;
-	return createCapProcess(c.cmd.argv.data(), c.in, c.err);
+	return detach(c);
+}
+
+inline Proc detachRedirInOut(const PendingCmd& ccmd)
+{
+	auto& c = const_cast<PendingCmd&>(ccmd);
+	assert(c.in==0 && "Rediredcting redirected input");
+
+	c.in = PIPE;
+
+	return detachRedirOut(c);
 }
 
 inline PendingCmd operator,(const PendingCmd& left, const Cmd& right)
