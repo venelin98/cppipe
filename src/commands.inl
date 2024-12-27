@@ -28,6 +28,18 @@ namespace _cppipe
 	}
 }
 
+template<typename... Args>
+inline Cmd::Cmd(Args... args)
+	: Cmd({ args... })
+{
+}
+
+inline Cmd::Cmd(std::initializer_list<const char*> args)
+	: argv(args)
+{
+	argv.push_back(nullptr);
+}
+
 inline DeadProc Cmd::operator()(fd_t in, fd_t out, fd_t err) const
 {
 	Proc p = createProcess(argv.data(), in, out, err);
@@ -58,13 +70,18 @@ inline Cmd& Cmd::operator+=(const char* arg)
 	return *this;
 }
 
+inline PendingCmd::PendingCmd(std::initializer_list<const char*> cmd_args)
+	: cmd(cmd_args)
+	, in(0)
+	, out(1)
+	, err(2)
+{}
 
-inline PendingCmd::PendingCmd(const Cmd& origin, fd_t in, fd_t out, fd_t err)
-	: cmd(origin)
+inline PendingCmd::PendingCmd(Cmd origin, fd_t in, fd_t out, fd_t err)
+	: cmd(std::move(origin))
 	, in(in)
 	, out(out)
 	, err(err)
-	, execed_(false)
 {}
 
 inline PendingCmd::~PendingCmd()

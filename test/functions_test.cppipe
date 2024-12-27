@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 
 	string out1 = $(ll + "src" | grep + "inl" | grep + "child");
 	if(out1.find("childProcess.inl") != string::npos)
-		cout << "OK 0/12" << endl;
+		cout << "OK 0/13" << endl;
 
 	string out2 = $(echo + "abc" + "def");
 	// "abc def" = 7 chars, trailing newlines are stripped by $()
@@ -35,8 +35,8 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
-	Cmd success("echo", "OK 1/12");
-	Cmd fail("mkdir", ".");
+	Cmd success("echo", "OK 1/13");
+	Cmd fail("false");
 	Cmd unexpected("echo", "FAILURE");
 	success &&
 	fail &&
@@ -47,34 +47,36 @@ int main(int argc, char* argv[])
 	// unexpected &&
 	// unexpected;
 
-	Cmd write_file("echo", "Existing ", " ", "file. OK 2/12");
+	Cmd write_file("echo", "Existing ", " ", "file. OK 2/13");
 
 	write_file > "file.txt";
 	grep + "Existing" < "file.txt";
 
-	echo + "Appended to file OK 3/12" >> "file.txt";
+	echo + "Appended to file OK 3/13" >> "file.txt";
 	grep + "Appended" < "file.txt" &&
 	rm + "file.txt" &&
 	fail ||
-	Cmd("echo", "OK 4/12");
+	Cmd("echo", "OK 4/13");
 
-	echo + "OK 5/12" &&
-	echo + "OK 6/12",
-	Cmd("echo", "OK 7/12");
+	echo + "OK 5/13" &&
+	echo + "OK 6/13",
+	Cmd("echo", "OK 7/13");
 
-	echo + "OK 8/12" &
-	echo + "OK 9/12" &&
-	echo + "OK 10/12";
+	echo + "OK 8/13" &
+	echo + "OK 9/13" &&
+	echo + "OK 10/13";
 
 	// wait for all detached
 	while(wait(nullptr) != -1);
 
 	Cmd run_OK = echo;
-	run_OK.append_args({ "OK 11/12" });
+	run_OK.append_args({ "OK 11/13" });
 	run( run_OK );
 
-	exec( echo + "OK 12/12" );
+	run({ "echo", "OK 12/13" });
+
+	exec({ "echo", "OK 13/13" });
 
 	// todo
-	// exec( echo + $(echo + "OK 11/12") );
+	// exec( echo + $(echo + "OK 11/13") );
 }

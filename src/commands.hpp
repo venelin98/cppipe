@@ -18,11 +18,11 @@ class Cmd
 public:
 	/* all args must be const char* */
 	template<typename... Args>
-	explicit Cmd(Args... args)
-		: argv({args...})
-	{
-		argv.push_back(nullptr);
-	}
+	explicit Cmd(Args...);
+
+	/* Implicitly convert from { "command", "param" }
+	 * e.g: exec({ "cmd", "arg" }); */
+	Cmd(std::initializer_list<const char*> args);
 
 	/* Execute the command, if arguments are not given use stdin,out,err
 	   else use the given file desciptors. this can also be used
@@ -45,8 +45,9 @@ public:
 class PendingCmd
 {
 public:
+	PendingCmd(std::initializer_list<const char*> cmd_args);
 	/* Can be implicitly created from a command */
-	PendingCmd(const Cmd&, fd_t in=0, fd_t out=1, fd_t err=2);
+	PendingCmd(Cmd, fd_t in=0, fd_t out=1, fd_t err=2);
 	/* Execute the command on destruction */
 	~PendingCmd();
 
@@ -60,10 +61,10 @@ public:
 	/* Prevent a pending command from being executed on destruction */
 	void cancel();
 
-	const Cmd& cmd;
-	fd_t in, out, err;
+	Cmd cmd;
+	fd_t in=0, out=1, err=2;
 private:
-	bool execed_;
+	bool execed_ = false;
 
 	friend Proc detach(const PendingCmd&);
 	friend Proc detachRedirIn(const PendingCmd&);
