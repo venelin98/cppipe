@@ -1,3 +1,4 @@
+fix debug
 example #!/usr/bin/cppipe
 description - advantages over manual compile
 man
