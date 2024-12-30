@@ -1,4 +1,5 @@
 fix debug
+many points in name - rc.local.start
 example #!/usr/bin/cppipe
 description - advantages over manual compile
 man

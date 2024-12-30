@@ -60,7 +60,6 @@ SrcType find_src_type(string_view path);
 const char DEBUG_PREFIX[] = "__DBG";
 
 // Context
-fs::path HOME;
 fs::path src_file;
 SrcType src_type;
 fs::path cache_dir;
@@ -79,7 +78,6 @@ int main(int argc, char* argv[])
 	int src_arg = parse_args_until_src(argc, argv);
 
 	// Init context
-	HOME = getenv("HOME");
 	src_file = find_path_to_src( argv[src_arg] );
 	src_type = find_src_type( argv[src_arg] );
 	cache_dir = get_cache_dir_path(src_file);
@@ -191,14 +189,19 @@ fs::path find_path_to_src(string_view src_file)
 fs::path get_cache_dir_path(const fs::path& src_file)
 {
 	fs::path cache_dir;
-	if(char* xdg_cache = getenv("XDG_CACHE_HOME"))
+	if(char* XDG_CACHE = getenv("XDG_CACHE_HOME"))
 	{
-		cache_dir = xdg_cache;
+		cache_dir = XDG_CACHE;
 		cache_dir /= "cppipe";
+	}
+	else if(char* HOME = getenv("HOME"))
+	{
+		cache_dir = HOME;
+		cache_dir /= ".cache/cppipe";
 	}
 	else
 	{
-		cache_dir = HOME / ".cache/cppipe";
+		cache_dir = "/var/cache/cppipe";
 	}
 	cache_dir += fs::canonical( src_file ).parent_path();
 	fs::create_directories(cache_dir);
