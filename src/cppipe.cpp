@@ -216,6 +216,12 @@ MappedFile mapfile_for_writing(const fs::path& file)
 	res.len = lseek(fd, 0, SEEK_END);
 	res.data = (char*)mmap(nullptr, res.len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
+	if(res.data == (void*)-1)
+	{
+		cerr << "ERROR: Couldn't map " << file << " for writing\n";
+		exit(1);
+	}
+
 	close(fd);
 	return res;
 }
