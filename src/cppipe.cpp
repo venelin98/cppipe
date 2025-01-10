@@ -70,6 +70,8 @@ fs::path bin;   // cache bins to avoid recompiles
 bool debug = false;
 // just compare timestamps of the source and bin, don't preprocess
 bool quick = false;
+// Just compile, don't run
+bool dont_run = false;
 
 }
 
@@ -91,6 +93,9 @@ int main(int argc, char* argv[])
 	compile_src_file();
 
 	// Run the src file without forking
+	if(dont_run)
+		return 0;
+
 	Cmd run;
 	if(debug)			   // debug it with gdb
 	{
@@ -101,6 +106,7 @@ int main(int argc, char* argv[])
 	run += bin.c_str();
 	for(int i = src_arg+1; i < argc; ++i)
 		run += argv[i];
+
 	exec(run);
 }
 
@@ -123,11 +129,12 @@ int parse_args_until_src(int argc, char* argv[])
 		{
 			print_usage();
 			cout << "Compile and run C/C++ source FILE\n"
-				"Pass the ARGUMENTS to the compiled binary\n"
+				"Pass the ARGUMENT to the compiled binary\n"
 				"The binaries are cached and recompiled only if the source or it's headers have changed\n\n"
 				"Options:\n"
 				"-g debug the binary, asserts are also enabled\n"
-				"-q quicker, just compare source and binary time stamps, if included files were updated a recompile WON'T occur!\n\n"
+				"-q quicker, just compare source and binary time stamps, if included files were updated a recompile WON'T occur!\n"
+				"-n don't run, just compile the file without running it\n\n"
 				"Environment variables:\n"
 				"CPPIPEPATH - ':'-separated list of directories to prepend to the FILE search path\n";
 			exit(0);
@@ -139,6 +146,10 @@ int parse_args_until_src(int argc, char* argv[])
 		else if( arg == "-q" )
 		{
 			quick = true;
+		}
+		else if( arg == "-n" )
+		{
+			dont_run = true;
 		}
 		else		// Then treat it as the src_arg
 		{
@@ -374,7 +385,7 @@ void compile_src_file()
 
 void print_usage()
 {
-	cout << "Usage: cppipe [OPTION]... FILE [ARGUMENTS]...\n";
+	cout << "Usage: cppipe [OPTION]... FILE [ARGUMENT]...\n";
 }
 
 SrcType find_src_type(const string_view p)
