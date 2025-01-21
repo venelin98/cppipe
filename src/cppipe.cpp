@@ -303,8 +303,10 @@ bool preprocess_and_compare()
 	// Result of preprocessing as string
 	string new_pp = read_to_end(preprocessing.out);
 
-	if( !wait(preprocessing) )	// preprocessing failed
-		exit(1);
+	// TODO: decide what to do here, #! causes inevitavble non-fatal errors
+	// maybe warn that preproccessing failed
+	// if( !wait(preprocessing) )	// preprocessing failed
+		// exit(1);
 
 	if( fs::exists(preprocessed_file) ) // todo: clean up if else blocks
 	{
