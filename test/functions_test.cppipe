@@ -75,8 +75,6 @@ int main(int argc, char* argv[])
 
 	run({ "echo", "OK 12/13" });
 
-	exec({ "echo", "OK 13/13" });
-
-	// todo
-	// exec( echo + $(echo + "OK 11/13") );
+	// The temporaty string is desroyed after the statement
+	exec( echo + $(echo + "OK 13/13").c_str() );
 }
