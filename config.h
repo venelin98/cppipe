@@ -13,7 +13,8 @@ const char* CXX = "c++";
 #define DEBUG_FLAGS "-g"
 
 // ...when not debugging
-#define RELEASE_FLAGS "-Ofast", "-s"
+// -O2 seems to work best for both execution and compilation speed
+#define RELEASE_FLAGS "-O2", "-s"
 
 // ...for both C and C++
 #define CPPFLAGS  "-fwhole-program", "-march=native", "-Wall", "-Wextra", "-pipe"

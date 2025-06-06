@@ -72,6 +72,7 @@ bool debug = false;
 bool quick = false;
 // Just compile, don't run
 bool dont_run = false;
+vector<const char*> additional_compiler_args;
 
 }
 
@@ -135,6 +136,10 @@ int parse_args_until_src(int argc, char* argv[])
 				"-g debug the binary, asserts are also enabled\n"
 				"-q quicker, just compare source and binary time stamps, if included files were updated a recompile WON'T occur!\n"
 				"-n don't run, just compile the file without running it\n\n"
+
+				"Any other argument that begins with '-' is passed to the compiler e.g.:\n"
+				"    cppipe -O0 file.cpp\n\n"
+
 				"Environment variables:\n"
 				"CPPIPEPATH - ':'-separated list of directories to prepend to the FILE search path\n";
 			exit(0);
@@ -150,6 +155,10 @@ int parse_args_until_src(int argc, char* argv[])
 		else if( arg == "-n" )
 		{
 			dont_run = true;
+		}
+		else if( !arg.empty() && arg[0] == '-') // if it's an unknown option pass it to the compiler
+		{
+			additional_compiler_args.push_back(argv[i]);
 		}
 		else		// Then treat it as the src_arg
 		{
@@ -303,10 +312,8 @@ bool preprocess_and_compare()
 	// Result of preprocessing as string
 	string new_pp = read_to_end(preprocessing.out);
 
-	// TODO: decide what to do here, #! causes inevitavble non-fatal errors
-	// maybe warn that preproccessing failed
-	// if( !wait(preprocessing) )	// preprocessing failed
-		// exit(1);
+	if( !wait(preprocessing) )	// preprocessing failed
+		exit(1);
 
 	if( fs::exists(preprocessed_file) ) // todo: clean up if else blocks
 	{
@@ -371,11 +378,15 @@ void compile_src_file()
 			compile.append_args({ CXXFLAGS });
 
 
+		// Remap the debug source file since we compile from stdin
+		string debug_remap = "-fdebug-prefix-map=<stdin>=" + src_file.string();
 		if(debug)
-			compile.append_args({ DEBUG_FLAGS });
+			compile.append_args({ DEBUG_FLAGS, debug_remap.c_str() });
 		else
 			compile.append_args({ RELEASE_FLAGS });
 
+		for(const char* arg: additional_compiler_args)
+			compile += arg;
 
 		if( !compile() )	 // if failed to compile
 		{
